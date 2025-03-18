@@ -30,8 +30,8 @@ jobs:
       run: ./gradlew assembleRelease
       
     - name: Releasing on GitHub
-      working-directory: ./SimpleFrame
       uses: sangatdesai/release-apk@main
+      working-directory: ./SimpleFrame
       env:
        GITHUB_TOKEN: ${{ secrets.TOKEN }}
        APP_FOLDER: ./SimpleFrame
