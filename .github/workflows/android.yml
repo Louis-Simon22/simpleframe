@@ -30,7 +30,7 @@ jobs:
       run: ./gradlew assembleRelease
       
     - name: Releasing on GitHub
-      uses: sangatdesai/release-apk@main
+      uses: jebarpg/release-apk@1.0.29
       env:
        GITHUB_TOKEN: ${{ secrets.TOKEN }}
        APP_FOLDER: ./SimpleFrame/app
