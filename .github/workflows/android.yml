@@ -28,9 +28,12 @@ jobs:
     - name: Build with Gradle
       working-directory: ./SimpleFrame
       run: ./gradlew assembleRelease
-      
-    - name: Releasing on GitHub
-      uses: jebarpg/release-apk@1.0.29
-      env:
-       GITHUB_TOKEN: ${{ secrets.TOKEN }}
-       APP_FOLDER: ./SimpleFrame/app
+    
+    - name: Upload apk to release
+      uses: svenstaro/upload-release-action@v2
+      with:
+        repo_token: ${{ secrets.GITHUB_TOKEN }}
+        file: ./SimpleFrame/app/build/outputs/apk/release/**.apk)
+        asset_name: com.louissimonmcnicoll.simpleframe
+        tag: ${{ github.ref }}
+        overwrite: true
