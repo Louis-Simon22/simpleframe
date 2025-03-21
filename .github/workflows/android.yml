@@ -2,11 +2,10 @@
 
 name: Android CI
 
-# on:
-#   push:
-#     tags:
-#       - '*'
-on: [push]
+on:
+  push:
+    tags:
+      - '*'
 
 jobs:
   build:
@@ -35,6 +34,7 @@ jobs:
       # ID used to access action output
       id: sign_app
       with:
+        # Source: https://github.com/marketplace/actions/sign-android-release#sign-android-release-action
         releaseDirectory: ./SimpleFrame/app/build/outputs/apk/release
         signingKeyBase64: ${{ secrets.SIGNING_KEY }}
         alias: ${{ secrets.ALIAS }}
@@ -47,8 +47,9 @@ jobs:
     - name: Upload apk to release
       uses: svenstaro/upload-release-action@v2
       with:
+        # Source: https://github.com/svenstaro/upload-release-action?tab=readme-ov-file#input-variables
         repo_token: ${{ secrets.GITHUB_TOKEN }}
         file: ${{ steps.sign_app.outputs.signedReleaseFile }}
-        asset_name: com.louissimonmcnicoll.simpleframe
+        asset_name: com.louissimonmcnicoll.simpleframe.apk
         tag: ${{ github.ref }}
         overwrite: true
