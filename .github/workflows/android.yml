@@ -29,15 +29,26 @@ jobs:
     - name: Build with Gradle
       working-directory: ./SimpleFrame
       run: ./gradlew assembleRelease
-    
-    - name: Grant execute permission for gradlew
-      run: ls -R ./SimpleFrame/app/build/outputs/apk/release/
+
+    - name: Sign APK
+      uses: r0adkll/sign-android-release@v1        
+      # ID used to access action output
+      id: sign_app
+      with:
+        releaseDirectory: ./SimpleFrame/app/build/outputs/apk/release
+        signingKeyBase64: ${{ secrets.SIGNING_KEY }}
+        alias: ${{ secrets.ALIAS }}
+        keyStorePassword: ${{ secrets.KEY_STORE_PASSWORD }}
+        keyPassword: ${{ secrets.KEY_PASSWORD }}
+      env:
+        # override default build-tools version (33.0.0) -- optional
+        BUILD_TOOLS_VERSION: "34.0.0"
 
     - name: Upload apk to release
       uses: svenstaro/upload-release-action@v2
       with:
         repo_token: ${{ secrets.GITHUB_TOKEN }}
-        file: ./SimpleFrame/app/build/outputs/apk/release/**.apk)
+        file: ${{ steps.sign_app.outputs.signedReleaseFile }}
         asset_name: com.louissimonmcnicoll.simpleframe
         tag: ${{ github.ref }}
         overwrite: true
