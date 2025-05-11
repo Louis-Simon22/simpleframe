@@ -8,6 +8,7 @@ AutoName: SimpleFrame
 
 RepoType: git
 Repo: https://github.com/Louis-Simon22/simpleframe.git
+Binaries: https://gitlab.com/-/project/36528/uploads/2588b436ef6a63837cea054be34ce952/com.louissimonmcnicoll.simpleframe.2.0.apk
 
 Builds:
   - versionName: '2.0'
@@ -16,6 +17,8 @@ Builds:
     subdir: SimpleFrame/app
     gradle:
       - yes
+
+AllowedAPKSigningKeys: 718a188043f41b62e7bf16815af4d2ef643030a97a7d878fe9ada43b28b69b0f
 
 AutoUpdateMode: Version
 UpdateCheckMode: Tags
