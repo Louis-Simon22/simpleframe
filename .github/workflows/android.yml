@@ -6,7 +6,7 @@ on:
   push:
     tags:
     # Source: https://docs.github.com/en/actions/writing-workflows/workflow-syntax-for-github-actions#patterns-to-match-branches-and-tags
-      - '**'
+      - 'release/*'
 
 jobs:
   build:
