@@ -21,6 +21,8 @@ import android.widget.RelativeLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.ActionBar;
@@ -56,7 +58,6 @@ import com.louissimonmcnicoll.simpleframe.transformers.ZoomOutPageTransformer;
 import com.louissimonmcnicoll.simpleframe.settings.AppData;
 
 public class MainActivity extends AppCompatActivity {
-
     private static class SlideShowTimerTask extends TimerTask {
         private final WeakReference<MainActivity> mainActivityWeakReference;
         private final Handler mainThreadHandler;
@@ -134,9 +135,9 @@ public class MainActivity extends AppCompatActivity {
     private CustomViewPager pager;
     private Timer slideshowTimer;
     private Gestures showActionBarGestures;
-
     private List<String> loadedImagePaths;
     private boolean paused;
+    private ActivityResultLauncher<String> requestPermissionLauncher;
 
     private final PageTransformer[] TRANSFORMERS = new PageTransformer[]{
             new AccordionTransformer(),
@@ -158,6 +159,9 @@ public class MainActivity extends AppCompatActivity {
     private Handler slideshowStartHandler;
     public boolean mDoubleBackToExitPressedOnce;
 
+    // TODO add message when the permissions are not granted
+    // TODO add explanation message for why permissions are required
+    // TODO test on vm and on physical devices
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -205,6 +209,21 @@ public class MainActivity extends AppCompatActivity {
                 selectTransformer();
             }
         });
+        // Register the permissions callback, which handles the user's response to the
+        // system permissions dialog. Save the return value, an instance of
+        // ActivityResultLauncher, as an instance variable.
+        requestPermissionLauncher =
+                registerForActivityResult(new ActivityResultContracts.RequestPermission(), isGranted -> {
+                    if (isGranted) {
+                        startSlideshowWithDelay();
+                    } else {
+                        // Explain to the user that the feature is unavailable because the
+                        // feature requires a permission that the user has denied. At the
+                        // same time, respect the user's decision. Don't link to system
+                        // settings in an effort to convince the user to change their
+                        // decision.
+                    }
+                });
     }
 
     @Override
@@ -221,22 +240,31 @@ public class MainActivity extends AppCompatActivity {
             tutorial.setVisibility(View.INVISIBLE);
         }
 
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU
-                && ContextCompat.checkSelfPermission(this, Manifest.permission.READ_MEDIA_IMAGES) != PackageManager.PERMISSION_GRANTED) {
-            ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.READ_MEDIA_IMAGES},
-                    REQUEST_READ_EXTERNAL_STORAGE_PERMISSION);
-        } else if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
-            ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.READ_EXTERNAL_STORAGE},
-                    REQUEST_READ_EXTERNAL_STORAGE_PERMISSION);
-        }
-
-        hideActionBar();
-
         pager.setVisibility(View.INVISIBLE);
-        loadingSlideshow.setVisibility(View.VISIBLE);
         noFileFoundTextView.setVisibility(View.INVISIBLE);
-        // Start slideshow with a very short delay so we don't freeze on the previous activity
-        slideshowStartHandler.postDelayed(this::startSlideshow, 1);
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            startSlideshowWithPermissionsCheck(Manifest.permission.READ_MEDIA_IMAGES);
+        } else {
+            startSlideshowWithPermissionsCheck(Manifest.permission.READ_EXTERNAL_STORAGE);
+        }
+    }
+
+    private void startSlideshowWithPermissionsCheck(String permission) {
+        if (ContextCompat.checkSelfPermission(this, permission) == PackageManager.PERMISSION_GRANTED) {
+            startSlideshowWithDelay();
+        } else if (ActivityCompat.shouldShowRequestPermissionRationale(this, permission)) {
+            // In an educational UI, explain to the user why your app requires this
+            // permission for a specific feature to behave as expected, and what
+            // features are disabled if it's declined. In this UI, include a
+            // "cancel" or "no thanks" button that lets the user continue
+            // using your app without granting the permission.
+            showInContextUI(...);
+        } else {
+            // You can directly ask for the permission.
+            // The registered ActivityResultCallback gets the result of this request.
+            requestPermissionLauncher.launch(permission);
+        }
     }
 
     private void setupTimer() {
@@ -354,7 +382,14 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
+    private void startSlideshowWithDelay() {
+        loadingSlideshow.setVisibility(View.VISIBLE);
+        // Start slideshow with a very short delay so we don't freeze on the previous activity
+        slideshowStartHandler.postDelayed(this::startSlideshow, 1);
+    }
+
     private void startSlideshow() {
+        hideActionBar();
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         String imagePath = AppData.getImagePath(getApplicationContext());
         List<String> imagePaths = FileUtils.getFileList(getApplicationContext(), imagePath);
