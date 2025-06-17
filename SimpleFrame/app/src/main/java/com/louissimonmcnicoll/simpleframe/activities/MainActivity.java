@@ -16,7 +16,9 @@ import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.WindowManager;
+import android.widget.Button;
 import android.widget.ImageView;
+import android.widget.LinearLayout;
 import android.widget.RelativeLayout;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -131,7 +133,10 @@ public class MainActivity extends AppCompatActivity {
     private ImagePagerAdapter imagePagerAdapter;
     private View tutorial;
     private TextView noFileFoundTextView;
-    private TextView loadingSlideshow;
+    private TextView loadingSlideshowTextView;
+    private TextView permissionsDeniedTextView;
+    private LinearLayout permissionsExplanationLayout;
+    private Button grantPermissionsButton;
     private CustomViewPager pager;
     private Timer slideshowTimer;
     private Gestures showActionBarGestures;
@@ -158,6 +163,7 @@ public class MainActivity extends AppCompatActivity {
     private Handler actionbarHideHandler;
     private Handler slideshowStartHandler;
     public boolean mDoubleBackToExitPressedOnce;
+    private boolean askedForPermissionOnce;
 
     // TODO add message when the permissions are not granted
     // TODO add explanation message for why permissions are required
@@ -168,9 +174,13 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.main_activity);
 
         paused = false;
+        askedForPermissionOnce = false;
         pager = findViewById(R.id.pager);
         noFileFoundTextView = findViewById(R.id.no_files_found);
-        loadingSlideshow = findViewById(R.id.loading_slideshow);
+        loadingSlideshowTextView = findViewById(R.id.loading_slideshow);
+        permissionsDeniedTextView = findViewById(R.id.permissions_denied);
+        permissionsExplanationLayout = findViewById(R.id.permissions_explanation);
+        grantPermissionsButton = findViewById(R.id.grant_permissions);
         tutorial = findViewById(R.id.tutorial);
 
         actionbarHideHandler = new Handler(Looper.getMainLooper());
@@ -214,16 +224,9 @@ public class MainActivity extends AppCompatActivity {
         // ActivityResultLauncher, as an instance variable.
         requestPermissionLauncher =
                 registerForActivityResult(new ActivityResultContracts.RequestPermission(), isGranted -> {
-                    if (isGranted) {
-                        startSlideshowWithDelay();
-                    } else {
-                        // Explain to the user that the feature is unavailable because the
-                        // feature requires a permission that the user has denied. At the
-                        // same time, respect the user's decision. Don't link to system
-                        // settings in an effort to convince the user to change their
-                        // decision.
-                    }
+                    startSlideshowWithPermissionsCheck();
                 });
+        grantPermissionsButton.setOnClickListener(view -> requestPermissionLauncher.launch(getPermissionCompat()));
     }
 
     @Override
@@ -243,14 +246,13 @@ public class MainActivity extends AppCompatActivity {
         pager.setVisibility(View.INVISIBLE);
         noFileFoundTextView.setVisibility(View.INVISIBLE);
 
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            startSlideshowWithPermissionsCheck(Manifest.permission.READ_MEDIA_IMAGES);
-        } else {
-            startSlideshowWithPermissionsCheck(Manifest.permission.READ_EXTERNAL_STORAGE);
-        }
+        startSlideshowWithPermissionsCheck();
     }
 
-    private void startSlideshowWithPermissionsCheck(String permission) {
+    private void startSlideshowWithPermissionsCheck() {
+        String permission = getPermissionCompat();
+        permissionsExplanationLayout.setVisibility(View.INVISIBLE);
+        permissionsDeniedTextView.setVisibility(View.INVISIBLE);
         if (ContextCompat.checkSelfPermission(this, permission) == PackageManager.PERMISSION_GRANTED) {
             startSlideshowWithDelay();
         } else if (ActivityCompat.shouldShowRequestPermissionRationale(this, permission)) {
@@ -259,11 +261,25 @@ public class MainActivity extends AppCompatActivity {
             // features are disabled if it's declined. In this UI, include a
             // "cancel" or "no thanks" button that lets the user continue
             // using your app without granting the permission.
-            showInContextUI(...);
+            permissionsExplanationLayout.setVisibility(View.VISIBLE);
+        } else if (ContextCompat.checkSelfPermission(this, permission) == PackageManager.PERMISSION_DENIED) {
+            if (askedForPermissionOnce) {
+                // If we ask for the permissions here too, it results in a loop as
+                // we launch the permission request activity, but it returns to this one immediately
+                // if the permissions is denied.
+                permissionsDeniedTextView.setVisibility(View.VISIBLE);
+            } else {
+                askedForPermissionOnce = true;
+                requestPermissionLauncher.launch(getPermissionCompat());
+            }
+        }
+    }
+
+    private String getPermissionCompat() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            return Manifest.permission.READ_MEDIA_IMAGES;
         } else {
-            // You can directly ask for the permission.
-            // The registered ActivityResultCallback gets the result of this request.
-            requestPermissionLauncher.launch(permission);
+            return Manifest.permission.READ_EXTERNAL_STORAGE;
         }
     }
 
@@ -383,7 +399,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void startSlideshowWithDelay() {
-        loadingSlideshow.setVisibility(View.VISIBLE);
+        loadingSlideshowTextView.setVisibility(View.VISIBLE);
         // Start slideshow with a very short delay so we don't freeze on the previous activity
         slideshowStartHandler.postDelayed(this::startSlideshow, 1);
     }
@@ -413,7 +429,7 @@ public class MainActivity extends AppCompatActivity {
             }
             pager.setScrollDurationFactor(8);
         }
-        loadingSlideshow.setVisibility(View.INVISIBLE);
+        loadingSlideshowTextView.setVisibility(View.INVISIBLE);
         if (pictureCount == 0) {
             noFileFoundTextView.setVisibility(View.VISIBLE);
             pager.setVisibility(View.INVISIBLE);

@@ -1,6 +1,6 @@
 <resources>
     <!-- MAIN STRINGS -->
-    <string name="main_toast_noSDReadRights">Von externer SD-Karte konnte nicht gelesen werden.</string>
+    <string name="main_toast_noSDReadRights">Konnte nicht auf die Bilddateien zugreifen. Überprüfen Sie die Berechtigungen</string>
     <string name="no_files_found">Keine Bilder im angegebenen Ordner gefunden.</string>
     <string name="main_toast_noFolderPathSet">Sie haben noch keinen Ordner Bilder-Ornder ausgewählt! </string>
     <string name="main_toast_exitmsg">Zum Verlassen erneut \'zurück\' drücken.</string>
@@ -31,6 +31,9 @@
     <string name="sett_no">Nein</string>
     <string name="sett_yes">Ja</string>
     <string name="loading_slideshow">Die Slideshow wird geladen…</string>
+    <string name="permissions_explanation">Berechtigungen müssen gewährt werden, um auf die Bilddateien zuzugreifen.</string>
+    <string name="permissions_denied">Die Berechtigungen wurden verweigert. Gehen Sie zu den Systemeinstellungen, um sie erneut zu gewähren.</string>
+    <string name="continue_">Gewähren</string>
     <!-- SETTINGS STRINGS END -->
 
 </resources>

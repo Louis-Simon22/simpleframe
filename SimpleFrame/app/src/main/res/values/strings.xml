@@ -3,7 +3,7 @@
     <!-- MAIN STRINGS -->
     <string name="app_name" translatable="false">SimpleFrame</string>
     <string name="app_version" translatable="false">2.0.0</string>
-    <string name="main_toast_noSDReadRights">Can\'t read from external SD card.</string>
+    <string name="main_toast_noSDReadRights">Could not access image files. Check permissions</string>
     <string name="no_files_found">No image files were found in the given directory.\nHead over to the settings to change it</string>
     <string name="main_toast_exitmsg">Press back again to leave.</string>
     <string name="main_toast_noFolderPathSet">You have not set a picture source folder yet!</string>
@@ -42,5 +42,8 @@
     <string name="sett_key_currentPage" translatable="false">currentpage</string>
     <string name="sett_key_direction" translatable="false">toogledirection</string>
     <string name="loading_slideshow">Loading slideshow…</string>
+    <string name="permissions_explanation">Permissions must be granted to access the image files.</string>
+    <string name="permissions_denied">Permissions were denied. Head to the system settings to grant them again.</string>
+    <string name="continue_">Grant</string>
     <!-- SETTINGS STRINGS END -->
 </resources>
