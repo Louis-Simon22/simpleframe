@@ -8,12 +8,12 @@ AutoName: SimpleFrame
 
 RepoType: git
 Repo: https://github.com/Louis-Simon22/simpleframe.git
-Binaries: https://github.com/Louis-Simon22/simpleframe/releases/download/release%2F2.1/com.louissimonmcnicoll.simpleframe.apk
+Binaries: https://github.com/Louis-Simon22/simpleframe/releases/download/release%2F2.2/com.louissimonmcnicoll.simpleframe.apk
 
 Builds:
-  - versionName: '2.1'
-    versionCode: 3
-    commit: release/2.1
+  - versionName: '2.2'
+    versionCode: 4
+    commit: release/2.2
     subdir: SimpleFrame/app
     gradle:
       - yes
@@ -22,5 +22,5 @@ AllowedAPKSigningKeys: 718a188043f41b62e7bf16815af4d2ef643030a97a7d878fe9ada43b2
 
 AutoUpdateMode: Version
 UpdateCheckMode: Tags
-CurrentVersion: '2.1'
-CurrentVersionCode: 3
+CurrentVersion: '2.2'
+CurrentVersionCode: 4
