@@ -9,6 +9,7 @@ import android.view.View;
 public class ZoomInTransformer implements ViewPager.PageTransformer {
     @Override
     public void transformPage(View page, float position) {
+        PropertiesResetter.resetPageProperties(page);
         final float scale = position < 0 ? position + 1f : Math.abs(1f - position);
         page.setScaleX(scale);
         page.setScaleY(scale);

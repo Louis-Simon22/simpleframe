@@ -9,6 +9,7 @@ import android.view.View;
 public class FadeInFadeOutTransformer implements ViewPager.PageTransformer {
     @Override
     public void transformPage(View page, float position) {
+        PropertiesResetter.resetPageProperties(page);
         page.setTranslationX(page.getWidth() * -position);
 
         if(position <= -1.0F || position >= 1.0F) {

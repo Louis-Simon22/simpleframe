@@ -9,9 +9,10 @@ import android.view.View;
 public class ForegroundToBackgroundTransformer implements ViewPager.PageTransformer{
     @Override
     public void transformPage(View page, float position) {
+        PropertiesResetter.resetPageProperties(page);
         final float height = page.getHeight();
         final float width = page.getWidth();
-        final float scale = min(position > 0 ? 1f : Math.abs(1f + position), 0.5f);
+        final float scale = min(position > 0 ? 1f : Math.abs(1f + position));
 
         page.setScaleX(scale);
         page.setScaleY(scale);
@@ -20,7 +21,7 @@ public class ForegroundToBackgroundTransformer implements ViewPager.PageTransfor
         page.setTranslationX(position > 0 ? width * position : -width * position * 0.25f);
     }
 
-    private static final float min(float val, float min) {
-        return val < min ? min : val;
+    private static float min(float val) {
+        return Math.max(val, (float) 0.5);
     }
 }

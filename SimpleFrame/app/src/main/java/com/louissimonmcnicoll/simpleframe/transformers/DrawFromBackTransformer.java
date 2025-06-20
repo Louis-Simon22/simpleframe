@@ -11,6 +11,7 @@ public class DrawFromBackTransformer implements ViewPager.PageTransformer {
 
     @Override
     public void transformPage(View page, float position) {
+        PropertiesResetter.resetPageProperties(page);
         int pageWidth = page.getWidth();
 
         if (position < -1 || position > 1) { // [-Infinity,-1)
@@ -63,7 +64,7 @@ public class DrawFromBackTransformer implements ViewPager.PageTransformer {
 
             // Scale the page down (between MIN_SCALE and 1)
             float v = (float) (0.3 - position);
-            v = v >= 0.25f ? 0.25f : v;
+            v = Math.min(v, 0.25f);
             float scaleFactor = MIN_SCALE + v;
             page.setScaleX(scaleFactor);
             page.setScaleY(scaleFactor);

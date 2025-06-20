@@ -4,14 +4,14 @@ plugins {
 
 android {
     namespace = "com.louissimonmcnicoll.simpleframe"
-    compileSdk = 34
+    compileSdk = 35
 
     defaultConfig {
         applicationId = "com.louissimonmcnicoll.simpleframe"
         minSdk = 23
-        targetSdk = 34
-        versionCode = 4
-        versionName = "2.2"
+        targetSdk = 35
+        versionCode = 5
+        versionName = "2.3"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -32,8 +32,13 @@ android {
 }
 
 dependencies {
-    implementation("androidx.appcompat:appcompat:1.7.0")
+    implementation("androidx.appcompat:appcompat:1.7.1")
     implementation("com.google.android.material:material:1.12.0")
-    implementation("androidx.exifinterface:exifinterface:1.3.7")
-    androidTestImplementation("androidx.test.espresso:espresso-core:3.5.1")
+    implementation("androidx.exifinterface:exifinterface:1.4.1")
+    androidTestImplementation("androidx.test.espresso:espresso-core:3.6.1")
+}
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(17)
+    }
 }

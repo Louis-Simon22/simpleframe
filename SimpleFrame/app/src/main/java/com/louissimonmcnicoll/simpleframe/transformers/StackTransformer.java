@@ -9,6 +9,7 @@ import android.view.View;
 public class StackTransformer implements ViewPager.PageTransformer {
     @Override
     public void transformPage(View page, float position) {
+        PropertiesResetter.resetPageProperties(page);
         page.setTranslationX(position < 0 ? 0f : -page.getWidth() * position);
     }
 }

@@ -10,6 +10,7 @@ public class RotateDownTransformer implements ViewPager.PageTransformer {
     private static final float ROT_MOD = -15f;
     @Override
     public void transformPage(View page, float position) {
+        PropertiesResetter.resetPageProperties(page);
 
         final float width = page.getWidth();
         final float height = page.getHeight();

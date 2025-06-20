@@ -12,10 +12,6 @@ import com.louissimonmcnicoll.simpleframe.R;
 public class AppData {
     public static final String mySettingsFilename = "SimpleFrameSettings";
 
-    public static void resetSettings(Context context) {
-        SettingsDefaults.resetSettings(context);
-    }
-
     // holds the time to display each picture in seconds
     public static int getDisplayTime(Context context) {
         return Integer.parseInt(getSharedPreferences(context).getString(context.getString(R.string.sett_key_displaytime),

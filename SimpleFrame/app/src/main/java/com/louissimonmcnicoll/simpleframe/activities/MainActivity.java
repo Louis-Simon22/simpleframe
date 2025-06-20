@@ -443,8 +443,8 @@ public class MainActivity extends AppCompatActivity {
         int[] transitionTypeValues = getResources().getIntArray(R.array.transitionTypeValues);
         int transitionStyleIndex = AppData.getTransitionStyle(getApplicationContext());
         // If the style is the random style, we randomly select another style
-        if (transitionStyleIndex == transitionTypeValues[transitionTypeValues.length - 1]) {
-            transitionStyleIndex = transitionTypeValues[(int) (Math.random() * TRANSFORMERS.length)];
+        if (transitionStyleIndex == transitionTypeValues.length - 1) {
+            transitionStyleIndex = (int) (Math.random() * TRANSFORMERS.length);
         }
         pager.setPageTransformer(true, TRANSFORMERS[transitionStyleIndex]);
     }

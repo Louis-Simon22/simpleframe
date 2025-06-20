@@ -9,6 +9,8 @@ import android.view.View;
 public class FlipVerticalTransformer implements ViewPager.PageTransformer {
     @Override
     public void transformPage(View page, float position) {
+        PropertiesResetter.resetPageProperties(page);
+
         final float rotation = -180f * position;
 
         page.setAlpha(rotation > 90f || rotation < -90f ? 0f : 1f);

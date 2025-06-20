@@ -9,6 +9,7 @@ import android.view.View;
 public class BackgroundToForegroundTransformer implements ViewPager.PageTransformer {
     @Override
     public void transformPage(View page, float position) {
+        PropertiesResetter.resetPageProperties(page);
         final float height = page.getHeight();
         final float width = page.getWidth();
         final float scale = min(position < 0 ? 1f : Math.abs(1f - position), 0.5f);
