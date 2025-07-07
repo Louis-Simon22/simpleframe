@@ -1,6 +1,8 @@
 # SimpleFrame
 
-[<img src="https://fdroid.gitlab.io/artwork/badge/get-it-on.png" height="75" alt="Link to F-Droid download">](https://fdroid.gitlab.io/artwork/badge/get-it-on.png)
+[<img src="https://fdroid.gitlab.io/artwork/badge/get-it-on.png" height="75" alt="Get it on F-Droid">](https://f-droid.org/packages/com.louissimonmcnicoll.simpleframe/)
+
+Or download the latest APK from the [Releases Section](https://github.com/Louis-Simon22/simpleframe/releases/latest).
 
 Displays a slideshow of images to transform older devices into picture frames.
 
