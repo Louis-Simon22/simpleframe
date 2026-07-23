@@ -36,4 +36,26 @@
             android:summaryOn="@string/sett_randomizeSummOn"
             android:title="@string/sett_randomize" />
     </PreferenceCategory>
+    <PreferenceCategory
+        android:key="sett_key_cat3"
+        android:title="@string/settings_category_display">
+        <ListPreference
+            android:entries="@array/brightnessModeEntries"
+            android:entryValues="@array/brightnessModeValues"
+            android:key="@string/sett_key_brightness_mode"
+            android:title="@string/sett_brightness_mode" />
+        <Preference
+            android:key="@string/sett_key_brightness_percent"
+            android:title="@string/sett_brightness_percent" />
+        <CheckBoxPreference
+            android:key="@string/sett_key_night_mode"
+            android:summary="@string/sett_night_mode_summary"
+            android:title="@string/sett_night_mode" />
+        <Preference
+            android:key="@string/sett_key_night_start"
+            android:title="@string/sett_night_start" />
+        <Preference
+            android:key="@string/sett_key_night_end"
+            android:title="@string/sett_night_end" />
+    </PreferenceCategory>
 </PreferenceScreen>

@@ -118,13 +118,18 @@ public class SimpleFileDialog {
         try {
             File dirFile = new File(dir);
             // if parent directory is not root, add ".." for going up one directory
-            if (!dirFile.getParent().equals("/")) {
+            String parent = dirFile.getParent();
+            if (parent != null && !parent.equals("/")) {
                 dirs.add("..");
             }
             if (! dirFile.exists() || ! dirFile.isDirectory()) {
                 return dirs;
             }
-            for (File file : dirFile.listFiles()) {
+            File[] children = dirFile.listFiles();
+            if (children == null) {
+                return dirs;
+            }
+            for (File file : children) {
                 if ( file.isDirectory()) {      // Add "/" to directory names to identify them in the list
                     if (!(file.getName().startsWith("."))) {
                         dirs.add( file.getName() + "/" );

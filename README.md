@@ -6,6 +6,22 @@ Displays a slideshow of images to transform older devices into picture frames.
 
 There are no networking features since old devices are inherently insecure. I recommend transfering the images using a USB connection.
 
+## Photo frame setup
+
+1. Open **Settings** and choose a picture folder. Every supported image in that
+   folder and its subfolders is included. The folder picker starts at the
+   storage root so internal storage, SD cards and USB drives are visible.
+2. Choose **Brightness control**:
+   - **Use system setting** leaves Android's current brightness unchanged.
+   - **Manual** enables the brightness slider.
+   - **Automatic** uses the device's ambient-light sensor.
+3. Optionally enable **Night schedule** and select daily screen-off and
+   screen-on times. Grant **Modify system settings** when prompted so
+   SimpleFrame can change automatic brightness and fully turn the display off.
+4. To use a dedicated device as a frame, select SimpleFrame as Android's
+   **Home app**. It will launch after boot and wait for removable storage to
+   finish mounting before starting the slideshow.
+
 ## Screenshots
 
 <img src="metadata/en-US/images/phoneScreenshots/1.png" width="300" alt="Stack transition" title="Stack transition">

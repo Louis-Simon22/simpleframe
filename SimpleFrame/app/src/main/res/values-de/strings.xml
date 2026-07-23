@@ -22,7 +22,10 @@
     <string name="sett_scalingSummOn">Bilder werden skaliert um den Bildschirm auszufüllen</string>
     <string name="settings_category_source">Quellen-Einstellungen</string>
     <string name="settings_category_slideshow">Anzeige-Einstellungen</string>
+    <string name="settings_category_display">Display-Einstellungen</string>
     <string name="sett_srcPath_externalSD">Pfade zu Bildern</string>
+    <string name="sett_choose_picture_folder">Bilderordner auswählen</string>
+    <string name="sett_picture_folder_summary">Alle unterstützten Fotos in diesem Ordner und seinen Unterordnern werden einbezogen</string>
     <string name="sett_transition">Übergänge</string>
     <string name="sett_transitionSumm">Wählen Sie, welche Bildübergänge Sie bei der Slideshow haben wollen.</string>
     <string name="sett_dialog_title">Ordner auswählen</string>
@@ -34,6 +37,19 @@
     <string name="permissions_explanation">Berechtigungen müssen gewährt werden, um auf die Bilddateien zuzugreifen.</string>
     <string name="permissions_denied">Die Berechtigungen wurden verweigert. Gehen Sie zu den Systemeinstellungen, um sie erneut zu gewähren.</string>
     <string name="continue_">Gewähren</string>
+    <string name="sett_brightness_mode">Helligkeitssteuerung</string>
+    <string name="sett_brightness_percent">Manuelle Helligkeit</string>
+    <string name="sett_night_mode">Nachtzeitplan</string>
+    <string name="sett_night_mode_summary">Display täglich nach Zeitplan aus- und einschalten</string>
+    <string name="sett_night_start">Ausschaltzeit</string>
+    <string name="sett_night_end">Einschaltzeit</string>
+    <string name="sett_brightness_value">%1$d%%</string>
+    <string name="sett_brightness_dialog_title">Helligkeit: %1$d%%</string>
+    <string name="sett_system_settings_permission_title">Displaysteuerung zulassen?</string>
+    <string name="sett_system_settings_permission_message">SimpleFrame kann das eigene Fenster immer abdunkeln. Erlauben Sie „Systemeinstellungen ändern“, um die automatische Helligkeit zu verwenden und das Display nachts vollständig auszuschalten.</string>
+    <string name="sett_system_settings_permission_allow">Zulassen</string>
+    <string name="sett_system_settings_permission_later">Später</string>
+    <string name="sett_auto_brightness_no_sensor">Automatik ist ausgewählt, aber dieses Gerät meldet keinen Umgebungslichtsensor</string>
     <!-- SETTINGS STRINGS END -->
 
 </resources>

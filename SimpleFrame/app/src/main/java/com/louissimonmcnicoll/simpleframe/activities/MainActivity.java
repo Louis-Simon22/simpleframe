@@ -2,8 +2,10 @@ package com.louissimonmcnicoll.simpleframe.activities;
 
 import android.Manifest;
 import android.app.Activity;
+import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.content.pm.PackageManager;
 import android.os.Build;
 import android.os.Bundle;
@@ -36,12 +38,18 @@ import androidx.viewpager.widget.ViewPager;
 import androidx.viewpager.widget.ViewPager.PageTransformer;
 
 import java.lang.ref.WeakReference;
+import java.util.ArrayList;
 import java.util.List;
-import java.util.Objects;
 import java.util.Timer;
 import java.util.TimerTask;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 
 import com.louissimonmcnicoll.simpleframe.R;
+import com.louissimonmcnicoll.simpleframe.display.DisplayController;
+import com.louissimonmcnicoll.simpleframe.display.NightModeScheduler;
+import com.louissimonmcnicoll.simpleframe.display.NightSchedule;
 import com.louissimonmcnicoll.simpleframe.utils.FileUtils;
 import com.louissimonmcnicoll.simpleframe.transformers.AccordionTransformer;
 import com.louissimonmcnicoll.simpleframe.transformers.BackgroundToForegroundTransformer;
@@ -82,16 +90,16 @@ public class MainActivity extends AppCompatActivity {
 
     private class ImagePagerAdapter extends PagerAdapter {
         private final LayoutInflater inflater;
-        private int localPage;
+        private final List<String> imagePaths;
 
-        public ImagePagerAdapter(Activity activity) {
+        public ImagePagerAdapter(Activity activity, List<String> imagePaths) {
             this.inflater = (LayoutInflater) activity.getSystemService(Context.LAYOUT_INFLATER_SERVICE);
-            filePaths = FileUtils.getFileList(getApplicationContext(), AppData.getImagePath(getApplicationContext()));
+            this.imagePaths = new ArrayList<>(imagePaths);
         }
 
         @Override
         public int getCount() {
-            return pictureCount;
+            return imagePaths.size();
         }
 
         @Override
@@ -102,12 +110,10 @@ public class MainActivity extends AppCompatActivity {
         @NonNull
         @Override
         public Object instantiateItem(@NonNull ViewGroup container, final int position) {
-            this.localPage = position;
-
             View viewLayout = inflater.inflate(R.layout.photo_container, container, false);
             ImageView imgDisplay = viewLayout.findViewById(R.id.photocontainer);
             imgDisplay.setScaleType(AppData.getScaling(getApplicationContext()) ? ImageView.ScaleType.CENTER_CROP : ImageView.ScaleType.FIT_CENTER);
-            imgDisplay.setImageBitmap(EXIFUtils.decodeFile(filePaths.get(this.localPage), getApplicationContext()));
+            imgDisplay.setImageBitmap(EXIFUtils.decodeFile(imagePaths.get(position), getApplicationContext()));
             imgDisplay.setOnTouchListener(showActionBarGestures);
             container.addView(viewLayout);
             return viewLayout;
@@ -117,10 +123,6 @@ public class MainActivity extends AppCompatActivity {
         public void destroyItem(ViewGroup container, int position, @NonNull Object object) {
             container.removeView((RelativeLayout) object);
         }
-
-        public int getPage() {
-            return this.localPage;
-        }
     }
 
     public final static int APP_STORAGE_ACCESS_REQUEST_CODE = 501;
@@ -129,6 +131,7 @@ public class MainActivity extends AppCompatActivity {
     private static final String TAG = MainActivity.class.getSimpleName();
 
     private static final int ACTION_BAR_SHOW_DURATION = 4000;
+    private static final int EMPTY_LIBRARY_RETRY_DELAY = 10_000;
 
     private ImagePagerAdapter imagePagerAdapter;
     private View tutorial;
@@ -143,6 +146,14 @@ public class MainActivity extends AppCompatActivity {
     private List<String> loadedImagePaths;
     private boolean paused;
     private ActivityResultLauncher<String> requestPermissionLauncher;
+    private final ExecutorService fileScanExecutor = Executors.newSingleThreadExecutor();
+    private Future<?> activeFileScan;
+    private int fileScanGeneration;
+    private View nightOverlay;
+    private Handler displayScheduleHandler;
+    private Handler fileScanRetryHandler;
+    private boolean nightActive;
+    private boolean storageReceiverRegistered;
 
     private final PageTransformer[] TRANSFORMERS = new PageTransformer[]{
             new AccordionTransformer(),
@@ -157,11 +168,29 @@ public class MainActivity extends AppCompatActivity {
             new ZoomInTransformer(),
             new ZoomOutPageTransformer(),
     };
-    private List<String> filePaths;
-    private int pictureCount;
     private int currentPage;
     private Handler actionbarHideHandler;
     private Handler slideshowStartHandler;
+    private final Runnable displayScheduleCheck = new Runnable() {
+        @Override
+        public void run() {
+            applyScheduledDisplayState(true);
+            displayScheduleHandler.postDelayed(this, 30_000);
+        }
+    };
+    private final Runnable emptyLibraryRetry = () -> {
+        if (!nightActive && (loadedImagePaths == null || loadedImagePaths.isEmpty())) {
+            startSlideshowWithPermissionsCheck();
+        }
+    };
+    private final BroadcastReceiver storageReceiver = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            if (!nightActive) {
+                startSlideshowWithPermissionsCheck();
+            }
+        }
+    };
     public boolean mDoubleBackToExitPressedOnce;
     private boolean askedForPermissionOnce;
 
@@ -171,6 +200,7 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        handleScheduledWakeIntent(getIntent());
         setContentView(R.layout.main_activity);
 
         paused = false;
@@ -182,9 +212,12 @@ public class MainActivity extends AppCompatActivity {
         permissionsExplanationLayout = findViewById(R.id.permissions_explanation);
         grantPermissionsButton = findViewById(R.id.grant_permissions);
         tutorial = findViewById(R.id.tutorial);
+        nightOverlay = findViewById(R.id.night_overlay);
 
         actionbarHideHandler = new Handler(Looper.getMainLooper());
         slideshowStartHandler = new Handler(Looper.getMainLooper());
+        displayScheduleHandler = new Handler(Looper.getMainLooper());
+        fileScanRetryHandler = new Handler(Looper.getMainLooper());
 
         showActionBarGestures = new Gestures(getApplicationContext()) {
             @Override
@@ -233,7 +266,13 @@ public class MainActivity extends AppCompatActivity {
     protected void onResume() {
         super.onResume();
 
-        setupTimer();
+        NightModeScheduler.update(this);
+        displayScheduleHandler.removeCallbacks(displayScheduleCheck);
+        displayScheduleHandler.postDelayed(displayScheduleCheck, 30_000);
+        boolean currentlyNight = applyScheduledDisplayState(false);
+        if (!currentlyNight) {
+            setupTimer();
+        }
 
         // refresh toolbar options (hide/show downloadNow)
         supportInvalidateOptionsMenu();
@@ -246,7 +285,33 @@ public class MainActivity extends AppCompatActivity {
         pager.setVisibility(View.INVISIBLE);
         noFileFoundTextView.setVisibility(View.INVISIBLE);
 
-        startSlideshowWithPermissionsCheck();
+        if (!currentlyNight) {
+            startSlideshowWithPermissionsCheck();
+        }
+    }
+
+    @Override
+    protected void onStart() {
+        super.onStart();
+        IntentFilter storageFilter = new IntentFilter();
+        storageFilter.addAction(Intent.ACTION_MEDIA_MOUNTED);
+        storageFilter.addAction(Intent.ACTION_MEDIA_UNMOUNTED);
+        storageFilter.addAction(Intent.ACTION_MEDIA_EJECT);
+        storageFilter.addDataScheme("file");
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            registerReceiver(storageReceiver, storageFilter, Context.RECEIVER_EXPORTED);
+        } else {
+            registerReceiver(storageReceiver, storageFilter);
+        }
+        storageReceiverRegistered = true;
+    }
+
+    @Override
+    protected void onNewIntent(Intent intent) {
+        super.onNewIntent(intent);
+        setIntent(intent);
+        handleScheduledWakeIntent(intent);
+        applyScheduledDisplayState(true);
     }
 
     private void startSlideshowWithPermissionsCheck() {
@@ -334,8 +399,9 @@ public class MainActivity extends AppCompatActivity {
     protected void onPause() {
         super.onPause();
 
-        slideshowTimer.cancel();
-        slideshowTimer = null;
+        cancelSlideshowTimer();
+        displayScheduleHandler.removeCallbacks(displayScheduleCheck);
+        fileScanRetryHandler.removeCallbacks(emptyLibraryRetry);
 
         getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
 
@@ -358,6 +424,7 @@ public class MainActivity extends AppCompatActivity {
         if (actionBar != null) {
             actionBar.show();
         }
+        actionbarHideHandler.removeCallbacksAndMessages(null);
         actionbarHideHandler.postDelayed(this::hideActionBar, ACTION_BAR_SHOW_DURATION);
     }
 
@@ -384,10 +451,14 @@ public class MainActivity extends AppCompatActivity {
 
     @Override
     protected void onStop() {
-        super.onStop();
+        if (storageReceiverRegistered) {
+            unregisterReceiver(storageReceiver);
+            storageReceiverRegistered = false;
+        }
         // Save the current Page to resume after next start
         AppData.setCurrentPage(getApplicationContext(), currentPage);
         debug("SAVING PAGE  " + currentPage);
+        super.onStop();
     }
 
     @Override
@@ -401,41 +472,122 @@ public class MainActivity extends AppCompatActivity {
     private void startSlideshowWithDelay() {
         loadingSlideshowTextView.setVisibility(View.VISIBLE);
         // Start slideshow with a very short delay so we don't freeze on the previous activity
+        slideshowStartHandler.removeCallbacksAndMessages(null);
         slideshowStartHandler.postDelayed(this::startSlideshow, 1);
     }
 
     private void startSlideshow() {
+        if (nightActive) {
+            return;
+        }
+        fileScanRetryHandler.removeCallbacks(emptyLibraryRetry);
         hideActionBar();
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+        noFileFoundTextView.setVisibility(View.INVISIBLE);
+        pager.setVisibility(View.INVISIBLE);
+        loadingSlideshowTextView.setVisibility(View.VISIBLE);
+
         String imagePath = AppData.getImagePath(getApplicationContext());
-        List<String> imagePaths = FileUtils.getFileList(getApplicationContext(), imagePath);
-        if (!imagePaths.equals(loadedImagePaths)) {
-            loadedImagePaths = imagePaths;
-
-            imagePagerAdapter = new ImagePagerAdapter(this);
-            pager.setAdapter(imagePagerAdapter);
-
-            filePaths = FileUtils.getFileList(getApplicationContext(), AppData.getImagePath(getApplicationContext()));
-            pictureCount = filePaths.size();
-            imagePagerAdapter.notifyDataSetChanged();
-
-            currentPage = AppData.getCurrentPage(getApplicationContext());
-            if (imagePagerAdapter.getCount() < currentPage) {
-                currentPage = 1;
-            }
-            // start on the page we left in onPause, unless it was the first or last picture (as this freezes the slideshow)
-            if (currentPage < Objects.requireNonNull(pager.getAdapter()).getCount() - 1 && currentPage > 0) {
-                pager.setCurrentItem(currentPage);
-            }
-            pager.setScrollDurationFactor(8);
+        int generation = ++fileScanGeneration;
+        if (activeFileScan != null) {
+            activeFileScan.cancel(true);
         }
+        activeFileScan = fileScanExecutor.submit(() -> {
+            List<String> imagePaths = FileUtils.getFileList(getApplicationContext(), imagePath);
+            runOnUiThread(() -> applyScannedImages(generation, imagePaths));
+        });
+    }
+
+    private void applyScannedImages(int generation, List<String> imagePaths) {
+        if (generation != fileScanGeneration || isFinishing() || isDestroyed() || nightActive) {
+            return;
+        }
+
+        loadedImagePaths = imagePaths;
+        imagePagerAdapter = new ImagePagerAdapter(this, loadedImagePaths);
+        pager.setAdapter(imagePagerAdapter);
+
+        currentPage = AppData.getCurrentPage(getApplicationContext());
+        if (imagePagerAdapter.getCount() <= currentPage) {
+            currentPage = 0;
+        }
+        if (currentPage > 0) {
+            pager.setCurrentItem(currentPage, false);
+        }
+        pager.setScrollDurationFactor(8);
+
         loadingSlideshowTextView.setVisibility(View.INVISIBLE);
-        if (pictureCount == 0) {
+        if (imagePagerAdapter.getCount() == 0) {
             noFileFoundTextView.setVisibility(View.VISIBLE);
             pager.setVisibility(View.INVISIBLE);
+            fileScanRetryHandler.postDelayed(emptyLibraryRetry, EMPTY_LIBRARY_RETRY_DELAY);
         } else {
+            fileScanRetryHandler.removeCallbacks(emptyLibraryRetry);
             noFileFoundTextView.setVisibility(View.INVISIBLE);
             pager.setVisibility(View.VISIBLE);
+        }
+    }
+
+    @Override
+    protected void onDestroy() {
+        fileScanGeneration++;
+        if (activeFileScan != null) {
+            activeFileScan.cancel(true);
+        }
+        fileScanExecutor.shutdownNow();
+        actionbarHideHandler.removeCallbacksAndMessages(null);
+        slideshowStartHandler.removeCallbacksAndMessages(null);
+        displayScheduleHandler.removeCallbacksAndMessages(null);
+        fileScanRetryHandler.removeCallbacksAndMessages(null);
+        super.onDestroy();
+    }
+
+    private boolean applyScheduledDisplayState(boolean reactToTransition) {
+        boolean shouldBeNight = NightSchedule.isNight(
+                AppData.getNightModeEnabled(this),
+                NightSchedule.currentMinuteOfDay(),
+                AppData.getNightStartMinutes(this),
+                AppData.getNightEndMinutes(this));
+        boolean wasNight = nightActive;
+        nightActive = shouldBeNight;
+        paused = shouldBeNight;
+
+        if (shouldBeNight) {
+            cancelSlideshowTimer();
+            fileScanGeneration++;
+            if (activeFileScan != null) {
+                activeFileScan.cancel(true);
+            }
+            loadingSlideshowTextView.setVisibility(View.INVISIBLE);
+            DisplayController.enterNight(this, nightOverlay);
+        } else {
+            DisplayController.leaveNight(this, nightOverlay);
+            if (reactToTransition && wasNight) {
+                setupTimer();
+                startSlideshowWithPermissionsCheck();
+            }
+        }
+        return shouldBeNight;
+    }
+
+    private void cancelSlideshowTimer() {
+        if (slideshowTimer != null) {
+            slideshowTimer.cancel();
+            slideshowTimer = null;
+        }
+    }
+
+    @SuppressWarnings("deprecation")
+    private void handleScheduledWakeIntent(Intent intent) {
+        if (intent == null
+                || !NightModeScheduler.ACTION_WAKE.equals(
+                intent.getStringExtra(NightModeScheduler.EXTRA_DISPLAY_ACTION))) {
+            return;
+        }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
+            setTurnScreenOn(true);
+        } else {
+            getWindow().addFlags(WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON);
         }
     }
 
@@ -455,4 +607,3 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 }
-

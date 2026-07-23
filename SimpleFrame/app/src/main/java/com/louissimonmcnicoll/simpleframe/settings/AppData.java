@@ -11,6 +11,9 @@ import com.louissimonmcnicoll.simpleframe.R;
  */
 public class AppData {
     public static final String mySettingsFilename = "SimpleFrameSettings";
+    public static final String BRIGHTNESS_MODE_SYSTEM = "system";
+    public static final String BRIGHTNESS_MODE_MANUAL = "manual";
+    public static final String BRIGHTNESS_MODE_AUTO = "auto";
 
     // holds the time to display each picture in seconds
     public static int getDisplayTime(Context context) {
@@ -70,6 +73,47 @@ public class AppData {
 
     public static void setCurrentPage(Context context, int page) {
         getSharedPreferences(context).edit().putInt(context.getString(R.string.sett_key_currentPage), page).apply();
+    }
+
+    public static String getBrightnessMode(Context context) {
+        return getSharedPreferences(context).getString(
+                context.getString(R.string.sett_key_brightness_mode),
+                (String) SettingsDefaults.getDefaultValueForKey(R.string.sett_key_brightness_mode));
+    }
+
+    public static int getBrightnessPercent(Context context) {
+        return getSharedPreferences(context).getInt(
+                context.getString(R.string.sett_key_brightness_percent),
+                (Integer) SettingsDefaults.getDefaultValueForKey(R.string.sett_key_brightness_percent));
+    }
+
+    public static boolean getNightModeEnabled(Context context) {
+        return getSharedPreferences(context).getBoolean(
+                context.getString(R.string.sett_key_night_mode),
+                (Boolean) SettingsDefaults.getDefaultValueForKey(R.string.sett_key_night_mode));
+    }
+
+    public static int getNightStartMinutes(Context context) {
+        return getSharedPreferences(context).getInt(
+                context.getString(R.string.sett_key_night_start),
+                (Integer) SettingsDefaults.getDefaultValueForKey(R.string.sett_key_night_start));
+    }
+
+    public static int getNightEndMinutes(Context context) {
+        return getSharedPreferences(context).getInt(
+                context.getString(R.string.sett_key_night_end),
+                (Integer) SettingsDefaults.getDefaultValueForKey(R.string.sett_key_night_end));
+    }
+
+    public static int getSavedScreenOffTimeout(Context context) {
+        return getSharedPreferences(context).getInt(
+                context.getString(R.string.sett_key_saved_screen_timeout), -1);
+    }
+
+    public static void setSavedScreenOffTimeout(Context context, int timeout) {
+        getSharedPreferences(context).edit()
+                .putInt(context.getString(R.string.sett_key_saved_screen_timeout), timeout)
+                .apply();
     }
 
     public static SharedPreferences getSharedPreferences(Context context) {
