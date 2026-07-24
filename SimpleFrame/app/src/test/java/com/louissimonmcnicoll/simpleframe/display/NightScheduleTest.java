@@ -5,6 +5,7 @@ import org.junit.Test;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
+/** Covers both same-day and overnight schedule boundaries. */
 public class NightScheduleTest {
     @Test
     public void overnightScheduleWrapsAcrossMidnight() {

@@ -2,7 +2,7 @@
 <!--suppress DeprecatedClassUsageInspection -->
 <PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android">
 
-    <!-- The default values are dynamically assigned in the activity -->
+    <!-- Defaults are centralized in SettingsDefaults; the activity adds dynamic summaries. -->
     <PreferenceCategory
         android:key="sett_key_cat1"
         android:title="@string/settings_category_source">

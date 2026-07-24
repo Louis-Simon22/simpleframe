@@ -45,7 +45,7 @@ public class SimpleFileDialog {
     public SimpleFileDialog(Context context, SimpleFileDialogListener SimpleFileDialogListener) {
         m_context = context;
 //        m_sdcardDirectory = Environment.getExternalStorageDirectory().getAbsolutePath();
-        m_sdcardDirectory = new SDCardHelper().getExteralStoragePath();
+        m_sdcardDirectory = SDCardHelper.getStorageRootPath();
 //        m_sdcardDirectory = "/storage";
         m_SimpleFileDialogListener = SimpleFileDialogListener;
 

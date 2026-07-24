@@ -9,19 +9,23 @@ import android.os.Build;
 
 import com.louissimonmcnicoll.simpleframe.settings.AppData;
 
+/** Owns the two alarms that bracket the configured overnight interval. */
 public final class NightModeScheduler {
     public static final String ACTION_SLEEP =
             "com.louissimonmcnicoll.simpleframe.action.NIGHT_SLEEP";
     public static final String ACTION_WAKE =
             "com.louissimonmcnicoll.simpleframe.action.NIGHT_WAKE";
-    public static final String EXTRA_DISPLAY_ACTION = "display_action";
-
     private static final int REQUEST_SLEEP = 7001;
     private static final int REQUEST_WAKE = 7002;
 
     private NightModeScheduler() {
     }
 
+    /**
+     * Replaces existing alarms with the next sleep and wake transitions.
+     *
+     * <p>Calling this after every schedule edit and boot keeps alarm state idempotent.</p>
+     */
     public static void update(Context context) {
         Context appContext = context.getApplicationContext();
         AlarmManager alarmManager =

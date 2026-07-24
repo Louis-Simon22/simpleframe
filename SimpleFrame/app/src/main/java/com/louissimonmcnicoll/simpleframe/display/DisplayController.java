@@ -9,16 +9,25 @@ import android.view.WindowManager;
 
 import com.louissimonmcnicoll.simpleframe.settings.AppData;
 
+/**
+ * Applies the frame's day and night display policies.
+ *
+ * <p>Window brightness is sufficient while SimpleFrame is visible. System brightness and the
+ * screen-off timeout are also updated when Android grants {@code WRITE_SETTINGS}, allowing the
+ * physical panel to turn off at night and restore its prior state in the morning.</p>
+ */
 public final class DisplayController {
     private static final int NIGHT_SCREEN_OFF_TIMEOUT_MS = 15_000;
 
     private DisplayController() {
     }
 
+    /** Returns whether SimpleFrame may change global brightness and timeout settings. */
     public static boolean canWriteSystemSettings(Context context) {
         return Settings.System.canWrite(context);
     }
 
+    /** Dims the app immediately and lets Android switch the panel off shortly afterwards. */
     public static void enterNight(Activity activity, View nightOverlay) {
         nightOverlay.setVisibility(View.VISIBLE);
         activity.getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
@@ -39,13 +48,15 @@ public final class DisplayController {
         }
     }
 
-    public static void leaveNight(Activity activity, View nightOverlay) {
+    /** Restores the normal daytime window, brightness, and keep-awake behavior. */
+    public static void enterDay(Activity activity, View nightOverlay) {
         restoreScreenOffTimeout(activity);
         nightOverlay.setVisibility(View.GONE);
         applyDayBrightness(activity);
         activity.getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
     }
 
+    /** Applies the configured brightness to both the app window and, when allowed, the system. */
     public static void applyDayBrightness(Activity activity) {
         String mode = AppData.getBrightnessMode(activity);
         if (AppData.BRIGHTNESS_MODE_MANUAL.equals(mode)) {
@@ -56,6 +67,7 @@ public final class DisplayController {
         applySystemBrightness(activity);
     }
 
+    /** Applies automatic or manual brightness to Android's global display setting. */
     public static void applySystemBrightness(Context context) {
         if (!canWriteSystemSettings(context)) {
             return;
@@ -80,6 +92,7 @@ public final class DisplayController {
         }
     }
 
+    /** Restores the timeout saved when night mode started, if one is pending. */
     public static void restoreScreenOffTimeout(Context context) {
         int savedTimeout = AppData.getSavedScreenOffTimeout(context);
         if (savedTimeout >= 0 && canWriteSystemSettings(context)) {
@@ -91,6 +104,12 @@ public final class DisplayController {
         }
     }
 
+    /**
+     * Wakes the display for a scheduled morning transition.
+     *
+     * <p>The deprecated screen wake-lock flags are deliberately used for compatibility with the
+     * old Android version found on the target photo frame.</p>
+     */
     @SuppressWarnings("deprecation")
     public static void wakeScreen(Context context) {
         restoreScreenOffTimeout(context);

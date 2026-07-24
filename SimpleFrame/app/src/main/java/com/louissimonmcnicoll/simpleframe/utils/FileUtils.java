@@ -1,7 +1,5 @@
 package com.louissimonmcnicoll.simpleframe.utils;
 
-import android.content.Context;
-
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayDeque;
@@ -13,22 +11,21 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Set;
 
-import com.louissimonmcnicoll.simpleframe.settings.AppData;
-
-public class FileUtils {
+/** Recursive, cancellable discovery of image files in a selected storage tree. */
+public final class FileUtils {
     private static final Set<String> ALLOWED_EXTS = new HashSet<>(
             Arrays.asList("jpg", "jpeg", "png", "webp", "gif", "bmp", "heic", "heif"));
+
+    private FileUtils() {
+    }
 
     /**
      * Returns all supported images below {@code path}, including images in subfolders.
      *
-     * <p>The scan is iterative so a deeply nested photo library cannot overflow the
-     * stack. Callers should run this method off the main thread for large libraries.</p>
+     * <p>The scan is iterative so a deeply nested photo library cannot overflow the stack.
+     * Callers should run this method off the main thread for large libraries. An interrupted
+     * scan returns the files discovered so far.</p>
      */
-    public static List<String> getFileList(Context context, String path) {
-        return getFileList(path, AppData.getRandomize(context));
-    }
-
     public static List<String> getFileList(String path, boolean randomize) {
         List<String> files = readDirectoryTree(path);
         if (randomize) {
@@ -65,9 +62,6 @@ public class FileUtils {
             if (children == null) {
                 continue;
             }
-            Arrays.sort(children, (left, right) ->
-                    String.CASE_INSENSITIVE_ORDER.compare(left.getName(), right.getName()));
-
             for (File child : children) {
                 if (Thread.currentThread().isInterrupted()) {
                     return imagePaths;
@@ -86,6 +80,7 @@ public class FileUtils {
 
     private static boolean isSupportedImage(File file) {
         String name = file.getName();
+        // Ignore macOS resource forks and ordinary hidden files copied to removable media.
         if (file.isHidden() || name.startsWith("._")) {
             return false;
         }

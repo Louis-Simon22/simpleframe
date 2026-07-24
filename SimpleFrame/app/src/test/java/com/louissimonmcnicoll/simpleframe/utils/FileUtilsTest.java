@@ -10,6 +10,7 @@ import java.util.List;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
+/** Regression tests for recursive scanning and removable-drive metadata filtering. */
 public class FileUtilsTest {
     @Rule
     public TemporaryFolder temporaryFolder = new TemporaryFolder();

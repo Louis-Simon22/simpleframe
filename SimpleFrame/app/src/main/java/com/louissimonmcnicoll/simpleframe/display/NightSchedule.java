@@ -2,17 +2,25 @@ package com.louissimonmcnicoll.simpleframe.display;
 
 import java.util.Calendar;
 
+/** Pure time calculations shared by the activity, alarm scheduler, and unit tests. */
 public final class NightSchedule {
-    public static final int MINUTES_PER_DAY = 24 * 60;
+    private static final int MINUTES_PER_DAY = 24 * 60;
 
     private NightSchedule() {
     }
 
+    /** Returns the local wall-clock time as minutes after midnight. */
     public static int currentMinuteOfDay() {
         Calendar now = Calendar.getInstance();
         return now.get(Calendar.HOUR_OF_DAY) * 60 + now.get(Calendar.MINUTE);
     }
 
+    /**
+     * Tests whether a time falls in a configured night interval.
+     *
+     * <p>Intervals may cross midnight. Equal start and end values intentionally mean disabled
+     * rather than a 24-hour blackout.</p>
+     */
     public static boolean isNight(boolean enabled, int minuteOfDay, int startMinutes, int endMinutes) {
         if (!enabled) {
             return false;
@@ -30,6 +38,7 @@ public final class NightSchedule {
         return current >= start || current < end;
     }
 
+    /** Returns the next local occurrence of a time, always strictly in the future. */
     public static long nextOccurrenceMillis(int minuteOfDay) {
         Calendar now = Calendar.getInstance();
         Calendar next = (Calendar) now.clone();
