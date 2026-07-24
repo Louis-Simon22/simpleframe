@@ -58,6 +58,9 @@ public class EXIFUtils {
 
     // @see http://sylvana.net/jpegcrop/exif_orientation.html
     public static Bitmap rotateBitmap(String src, Bitmap bitmap) {
+        if (bitmap == null) {
+            return null;
+        }
         try {
             int orientation = getExifOrientation(src);
             if (orientation == 1) {

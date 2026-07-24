@@ -31,4 +31,10 @@
         <item name="11">Transition aléatoire</item>
     </string-array>
 
+    <string-array name="brightnessModeEntries">
+        <item>Utiliser le réglage système</item>
+        <item>Manuelle</item>
+        <item>Automatique (capteur de lumière)</item>
+    </string-array>
+
 </resources>

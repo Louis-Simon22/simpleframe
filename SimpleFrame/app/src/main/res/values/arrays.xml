@@ -61,4 +61,16 @@
         <item name="11">11</item>
     </string-array>
 
+    <string-array name="brightnessModeEntries">
+        <item>Use system setting</item>
+        <item>Manual</item>
+        <item>Automatic (light sensor)</item>
+    </string-array>
+
+    <string-array name="brightnessModeValues" translatable="false">
+        <item>system</item>
+        <item>manual</item>
+        <item>auto</item>
+    </string-array>
+
 </resources>
