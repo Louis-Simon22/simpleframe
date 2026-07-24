@@ -5,6 +5,7 @@ import android.content.Context;
 import android.os.PowerManager;
 import android.provider.Settings;
 import android.view.View;
+import android.view.Window;
 import android.view.WindowManager;
 
 import com.louissimonmcnicoll.simpleframe.settings.AppData;
@@ -67,6 +68,12 @@ public final class DisplayController {
         applySystemBrightness(activity);
     }
 
+    /** Previews a manual brightness value on a window without changing saved settings. */
+    public static void previewBrightness(Window window, int percent) {
+        int boundedPercent = Math.max(1, Math.min(100, percent));
+        setWindowBrightness(window, boundedPercent / 100f);
+    }
+
     /** Applies automatic or manual brightness to Android's global display setting. */
     public static void applySystemBrightness(Context context) {
         if (!canWriteSystemSettings(context)) {
@@ -127,8 +134,12 @@ public final class DisplayController {
     }
 
     private static void setWindowBrightness(Activity activity, float brightness) {
-        WindowManager.LayoutParams attributes = activity.getWindow().getAttributes();
+        setWindowBrightness(activity.getWindow(), brightness);
+    }
+
+    private static void setWindowBrightness(Window window, float brightness) {
+        WindowManager.LayoutParams attributes = window.getAttributes();
         attributes.screenBrightness = brightness;
-        activity.getWindow().setAttributes(attributes);
+        window.setAttributes(attributes);
     }
 }
