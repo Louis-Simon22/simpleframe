@@ -41,6 +41,7 @@ public final class NightModeScheduler {
 
         if (!AppData.getNightModeEnabled(appContext)) {
             DisplayController.restoreScreenOffTimeout(appContext);
+            DisplayController.releaseNightWakeLock();
             return;
         }
 

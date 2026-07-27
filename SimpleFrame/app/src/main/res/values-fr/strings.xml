@@ -9,8 +9,17 @@
     <!-- MAIN STRINGS END -->
 
     <!-- SETTINGS STRINGS -->
-    <string name="action_settings">Paramètres</string>
+    <string name="action_settings">Paramètres du diaporama</string>
+    <string name="action_android_settings">Paramètres Android</string>
+    <string name="action_power">Alimentation</string>
     <string name="title_activity_settings">Paramètres</string>
+    <string name="frame_controls_service_name">Commandes SimpleFrame</string>
+    <string name="frame_controls_service_description">Affiche un bouton de retour au-dessus des paramètres Android et fournit le menu d’alimentation du cadre photo.</string>
+    <string name="frame_controls_return">Revenir à SimpleFrame</string>
+    <string name="frame_controls_setup_title">Activer les commandes du cadre</string>
+    <string name="frame_controls_setup_message">Activez « Commandes SimpleFrame » dans les paramètres d’accessibilité. Cette option est nécessaire pour le bouton d’alimentation et le bouton de retour flottant au-dessus des paramètres Android.</string>
+    <string name="frame_controls_setup_open">Ouvrir les paramètres d’accessibilité</string>
+    <string name="frame_controls_unavailable">Les commandes SimpleFrame ne sont pas disponibles. Vérifiez les paramètres d’accessibilité et réessayez.</string>
     <string name="sett_displayTime">Temps d\'affichage</string>
     <string name="sett_displayTimeSumm">Le temps d\'affichage de chaque image</string>
     <string name="sett_randomize">Image aléatoires</string>

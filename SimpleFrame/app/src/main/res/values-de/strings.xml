@@ -8,8 +8,17 @@
     <!-- MAIN STRINGS END -->
 
     <!-- SETTINGS STRINGS -->
-    <string name="action_settings">Einstellungen</string>
+    <string name="action_settings">Diashow-Einstellungen</string>
+    <string name="action_android_settings">Android-Einstellungen</string>
+    <string name="action_power">Ein/Aus</string>
     <string name="title_activity_settings">Einstellungen</string>
+    <string name="frame_controls_service_name">SimpleFrame-Steuerung</string>
+    <string name="frame_controls_service_description">Zeigt eine Schaltfläche zur Rückkehr über den Android-Einstellungen an und stellt das Ein-/Aus-Menü des Bilderrahmens bereit.</string>
+    <string name="frame_controls_return">Zu SimpleFrame zurückkehren</string>
+    <string name="frame_controls_setup_title">Rahmensteuerung aktivieren</string>
+    <string name="frame_controls_setup_message">Aktivieren Sie „SimpleFrame-Steuerung“ unter Bedienungshilfen. Dies ist für die Ein-/Aus-Schaltfläche und eine schwebende Rückkehr-Schaltfläche über den Android-Einstellungen erforderlich.</string>
+    <string name="frame_controls_setup_open">Bedienungshilfen öffnen</string>
+    <string name="frame_controls_unavailable">Die SimpleFrame-Steuerung ist nicht verfügbar. Prüfen Sie die Bedienungshilfen und versuchen Sie es erneut.</string>
     <string name="sett_displayTime">Anzeigedauer</string>
     <string name="sett_displayTimeSumm">Anzeigedauer eines Bildes</string>
     <string name="sett_randomize">Zufällige Bildwiedergabe</string>

@@ -83,7 +83,7 @@ public class SettingsActivity extends PreferenceActivity
     protected void onResume() {
         super.onResume();
         refreshPreferenceSummaries();
-        DisplayController.applySystemBrightness(this);
+        DisplayController.applyDayBrightness(this);
         NightModeScheduler.update(this);
     }
 
@@ -107,7 +107,7 @@ public class SettingsActivity extends PreferenceActivity
         NightModeScheduler.update(this);
 
         if (isBrightnessPreference(key)) {
-            DisplayController.applySystemBrightness(this);
+            DisplayController.applyDayBrightness(this);
         }
         if (needsSystemSettingsPermission(key)) {
             offerSystemSettingsPermission();
@@ -239,14 +239,41 @@ public class SettingsActivity extends PreferenceActivity
         SeekBar seekBar = new SeekBar(this);
         seekBar.setMax(99);
         seekBar.setProgress(initialBrightness - 1);
+        int seekBarHeight =
+                Math.round(64 * getResources().getDisplayMetrics().density);
+        seekBar.setLayoutParams(new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                seekBarHeight));
+
+        LinearLayout content = new LinearLayout(this);
+        content.setOrientation(LinearLayout.VERTICAL);
+        int padding = Math.round(24 * getResources().getDisplayMetrics().density);
+        content.setPadding(padding, 0, padding, 0);
+        content.addView(valueLabel);
+        content.addView(seekBar);
+
+        AlertDialog dialog = new AlertDialog.Builder(this)
+                .setTitle(R.string.sett_brightness_percent)
+                .setView(content)
+                .setNegativeButton(android.R.string.cancel, null)
+                .setPositiveButton(android.R.string.ok, (ignoredDialog, which) ->
+                        sharedPreferences.edit()
+                                .putInt(
+                                        getString(R.string.sett_key_brightness_percent),
+                                        seekBar.getProgress() + 1)
+                                .apply())
+                .create();
+
         seekBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
             @Override
             public void onProgressChanged(
                     SeekBar changedSeekBar,
                     int progress,
                     boolean fromUser) {
+                int percent = progress + 1;
                 valueLabel.setText(
-                        getString(R.string.sett_brightness_dialog_title, progress + 1));
+                        getString(R.string.sett_brightness_dialog_title, percent));
+                DisplayController.previewBrightness(dialog.getWindow(), percent);
             }
 
             @Override
@@ -258,24 +285,11 @@ public class SettingsActivity extends PreferenceActivity
             }
         });
 
-        LinearLayout content = new LinearLayout(this);
-        content.setOrientation(LinearLayout.VERTICAL);
-        int padding = Math.round(24 * getResources().getDisplayMetrics().density);
-        content.setPadding(padding, 0, padding, 0);
-        content.addView(valueLabel);
-        content.addView(seekBar);
-
-        new AlertDialog.Builder(this)
-                .setTitle(R.string.sett_brightness_percent)
-                .setView(content)
-                .setNegativeButton(android.R.string.cancel, null)
-                .setPositiveButton(android.R.string.ok, (dialog, which) ->
-                        sharedPreferences.edit()
-                                .putInt(
-                                        getString(R.string.sett_key_brightness_percent),
-                                        seekBar.getProgress() + 1)
-                                .apply())
-                .show();
+        dialog.setOnShowListener(
+                ignored -> DisplayController.previewBrightness(
+                        dialog.getWindow(),
+                        initialBrightness));
+        dialog.show();
     }
 
     private void setupTimePicker(Preference preference, boolean startTime) {

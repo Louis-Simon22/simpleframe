@@ -1,6 +1,7 @@
 package com.louissimonmcnicoll.simpleframe.activities;
 
 import android.Manifest;
+import android.app.AlertDialog;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
@@ -10,6 +11,7 @@ import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
+import android.provider.Settings;
 import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -41,6 +43,7 @@ import com.louissimonmcnicoll.simpleframe.display.DisplayController;
 import com.louissimonmcnicoll.simpleframe.display.NightModeScheduler;
 import com.louissimonmcnicoll.simpleframe.display.NightSchedule;
 import com.louissimonmcnicoll.simpleframe.settings.AppData;
+import com.louissimonmcnicoll.simpleframe.system.FrameControlsService;
 import com.louissimonmcnicoll.simpleframe.transformers.AccordionTransformer;
 import com.louissimonmcnicoll.simpleframe.transformers.BackgroundToForegroundTransformer;
 import com.louissimonmcnicoll.simpleframe.transformers.CubeOutTransformer;
@@ -245,6 +248,8 @@ public class MainActivity extends AppCompatActivity {
     protected void onResume() {
         super.onResume();
 
+        // The return control is useful only while another app covers SimpleFrame.
+        FrameControlsService.dismissReturnOverlay(this);
         NightModeScheduler.update(this);
         applyDisplayState(true);
         startDisplayScheduleChecks();
@@ -535,15 +540,69 @@ public class MainActivity extends AppCompatActivity {
 
     @Override
     public boolean onOptionsItemSelected(@NonNull MenuItem item) {
-        if (item.getItemId() != R.id.action_settings) {
-            return super.onOptionsItemSelected(item);
+        int itemId = item.getItemId();
+        if (itemId == R.id.action_settings) {
+            openSettings();
+            return true;
         }
-        openSettings();
-        return true;
+        if (itemId == R.id.action_android_settings) {
+            openAndroidSettings();
+            return true;
+        }
+        if (itemId == R.id.action_power) {
+            openPowerDialog();
+            return true;
+        }
+        return super.onOptionsItemSelected(item);
     }
 
     private void openSettings() {
         startActivity(new Intent(this, SettingsActivity.class));
+    }
+
+    /**
+     * Opens Android Settings only after the trusted return overlay is ready.
+     * This prevents hardware-button-free frames from becoming trapped in the
+     * external Settings app.
+     */
+    private void openAndroidSettings() {
+        if (!FrameControlsService.isConnected()) {
+            showFrameControlsSetupDialog();
+            return;
+        }
+        if (!FrameControlsService.requestReturnOverlay(this)) {
+            Toast.makeText(this, R.string.frame_controls_unavailable, Toast.LENGTH_LONG).show();
+            return;
+        }
+        startActivity(new Intent(Settings.ACTION_SETTINGS));
+    }
+
+    /** Opens the firmware power/restart dialog through the accessibility service. */
+    private void openPowerDialog() {
+        if (!FrameControlsService.isConnected()) {
+            showFrameControlsSetupDialog();
+            return;
+        }
+        if (!FrameControlsService.showPowerDialog()) {
+            Toast.makeText(this, R.string.frame_controls_unavailable, Toast.LENGTH_LONG).show();
+        }
+    }
+
+    /**
+     * Accessibility is required for global power actions and for an overlay the
+     * Android Settings app cannot suppress. If enabled while that screen is open,
+     * the pending return button appears immediately and brings the user back.
+     */
+    private void showFrameControlsSetupDialog() {
+        new AlertDialog.Builder(this)
+                .setTitle(R.string.frame_controls_setup_title)
+                .setMessage(R.string.frame_controls_setup_message)
+                .setNegativeButton(android.R.string.cancel, null)
+                .setPositiveButton(R.string.frame_controls_setup_open, (dialog, which) -> {
+                    FrameControlsService.requestReturnOverlay(this);
+                    startActivity(new Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS));
+                })
+                .show();
     }
 
     @Override

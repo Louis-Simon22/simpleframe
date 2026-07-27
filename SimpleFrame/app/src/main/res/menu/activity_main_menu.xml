@@ -1,10 +1,26 @@
 <menu xmlns:android="http://schemas.android.com/apk/res/android"
       xmlns:app="http://schemas.android.com/apk/res-auto"
       xmlns:tools="http://schemas.android.com/tools"
-      tools:context=".MainActivity">
+      tools:context=".MainActivity"
+      tools:ignore="AlwaysShowAction">
+    <!-- A photo frame has ample width and no hardware controls, so these actions
+         must remain visible instead of moving into an inaccessible overflow menu. -->
     <item
         android:id="@+id/action_settings"
-        android:icon="@drawable/ic_settings"
+        android:icon="@drawable/ic_slideshow_settings"
         android:title="@string/action_settings"
+        android:orderInCategory="10"
+        app:showAsAction="always" />
+    <item
+        android:id="@+id/action_android_settings"
+        android:icon="@drawable/ic_settings"
+        android:title="@string/action_android_settings"
+        android:orderInCategory="20"
+        app:showAsAction="always" />
+    <item
+        android:id="@+id/action_power"
+        android:icon="@drawable/ic_power"
+        android:title="@string/action_power"
+        android:orderInCategory="30"
         app:showAsAction="always" />
 </menu>
