@@ -1,15 +1,17 @@
 package com.louissimonmcnicoll.simpleframe.activities;
 
 import android.Manifest;
-import android.app.Activity;
+import android.app.AlertDialog;
+import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.content.pm.PackageManager;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
-import android.util.Log;
+import android.provider.Settings;
 import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -35,116 +37,51 @@ import androidx.viewpager.widget.PagerAdapter;
 import androidx.viewpager.widget.ViewPager;
 import androidx.viewpager.widget.ViewPager.PageTransformer;
 
-import java.lang.ref.WeakReference;
-import java.util.List;
-import java.util.Objects;
-import java.util.Timer;
-import java.util.TimerTask;
-
 import com.louissimonmcnicoll.simpleframe.R;
-import com.louissimonmcnicoll.simpleframe.utils.FileUtils;
+import com.louissimonmcnicoll.simpleframe.custom_views.CustomViewPager;
+import com.louissimonmcnicoll.simpleframe.display.DisplayController;
+import com.louissimonmcnicoll.simpleframe.display.NightModeScheduler;
+import com.louissimonmcnicoll.simpleframe.display.NightSchedule;
+import com.louissimonmcnicoll.simpleframe.settings.AppData;
+import com.louissimonmcnicoll.simpleframe.system.FrameControlsService;
 import com.louissimonmcnicoll.simpleframe.transformers.AccordionTransformer;
 import com.louissimonmcnicoll.simpleframe.transformers.BackgroundToForegroundTransformer;
 import com.louissimonmcnicoll.simpleframe.transformers.CubeOutTransformer;
-import com.louissimonmcnicoll.simpleframe.custom_views.CustomViewPager;
 import com.louissimonmcnicoll.simpleframe.transformers.DrawFromBackTransformer;
-import com.louissimonmcnicoll.simpleframe.utils.EXIFUtils;
 import com.louissimonmcnicoll.simpleframe.transformers.FadeInFadeOutTransformer;
 import com.louissimonmcnicoll.simpleframe.transformers.FlipVerticalTransformer;
 import com.louissimonmcnicoll.simpleframe.transformers.ForegroundToBackgroundTransformer;
-import com.louissimonmcnicoll.simpleframe.utils.Gestures;
 import com.louissimonmcnicoll.simpleframe.transformers.RotateDownTransformer;
 import com.louissimonmcnicoll.simpleframe.transformers.StackTransformer;
 import com.louissimonmcnicoll.simpleframe.transformers.ZoomInTransformer;
 import com.louissimonmcnicoll.simpleframe.transformers.ZoomOutPageTransformer;
-import com.louissimonmcnicoll.simpleframe.settings.AppData;
+import com.louissimonmcnicoll.simpleframe.utils.EXIFUtils;
+import com.louissimonmcnicoll.simpleframe.utils.FileUtils;
+import com.louissimonmcnicoll.simpleframe.utils.Gestures;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+
+/**
+ * Displays the photo library and coordinates the foreground photo-frame lifecycle.
+ *
+ * <p>Directory scanning runs on a worker thread. All view updates, slide changes,
+ * empty-library retries, and schedule checks share one main-thread handler so they
+ * can be stopped together when the activity leaves the foreground.</p>
+ */
 public class MainActivity extends AppCompatActivity {
-    private static class SlideShowTimerTask extends TimerTask {
-        private final WeakReference<MainActivity> mainActivityWeakReference;
-        private final Handler mainThreadHandler;
+    private static final long ACTION_BAR_SHOW_DURATION_MS = 4_000;
+    private static final long DISPLAY_SCHEDULE_CHECK_INTERVAL_MS = 30_000;
+    private static final long EMPTY_LIBRARY_RETRY_DELAY_MS = 10_000;
 
-        private SlideShowTimerTask(WeakReference<MainActivity> mainActivityWeakReference) {
-            this.mainActivityWeakReference = mainActivityWeakReference;
-            this.mainThreadHandler = new Handler(Looper.getMainLooper());
-        }
+    private final Handler uiHandler = new Handler(Looper.getMainLooper());
+    private final ExecutorService fileScanExecutor = Executors.newSingleThreadExecutor();
+    private final Runnable hideActionBarTask = this::hideActionBar;
 
-        @Override
-        public void run() {
-            MainActivity mainActivity = mainActivityWeakReference.get();
-            if (mainActivity == null) {
-                cancel();
-            } else {
-                mainThreadHandler.post(mainActivity::nextSlideshowPage);
-            }
-        }
-    }
-
-    private class ImagePagerAdapter extends PagerAdapter {
-        private final LayoutInflater inflater;
-        private int localPage;
-
-        public ImagePagerAdapter(Activity activity) {
-            this.inflater = (LayoutInflater) activity.getSystemService(Context.LAYOUT_INFLATER_SERVICE);
-            filePaths = FileUtils.getFileList(getApplicationContext(), AppData.getImagePath(getApplicationContext()));
-        }
-
-        @Override
-        public int getCount() {
-            return pictureCount;
-        }
-
-        @Override
-        public boolean isViewFromObject(@NonNull View view, @NonNull Object object) {
-            return view == object;
-        }
-
-        @NonNull
-        @Override
-        public Object instantiateItem(@NonNull ViewGroup container, final int position) {
-            this.localPage = position;
-
-            View viewLayout = inflater.inflate(R.layout.photo_container, container, false);
-            ImageView imgDisplay = viewLayout.findViewById(R.id.photocontainer);
-            imgDisplay.setScaleType(AppData.getScaling(getApplicationContext()) ? ImageView.ScaleType.CENTER_CROP : ImageView.ScaleType.FIT_CENTER);
-            imgDisplay.setImageBitmap(EXIFUtils.decodeFile(filePaths.get(this.localPage), getApplicationContext()));
-            imgDisplay.setOnTouchListener(showActionBarGestures);
-            container.addView(viewLayout);
-            return viewLayout;
-        }
-
-        @Override
-        public void destroyItem(ViewGroup container, int position, @NonNull Object object) {
-            container.removeView((RelativeLayout) object);
-        }
-
-        public int getPage() {
-            return this.localPage;
-        }
-    }
-
-    public final static int APP_STORAGE_ACCESS_REQUEST_CODE = 501;
-    public final static int REQUEST_READ_EXTERNAL_STORAGE_PERMISSION = 501;
-    private final static boolean DEBUG = true;
-    private static final String TAG = MainActivity.class.getSimpleName();
-
-    private static final int ACTION_BAR_SHOW_DURATION = 4000;
-
-    private ImagePagerAdapter imagePagerAdapter;
-    private View tutorial;
-    private TextView noFileFoundTextView;
-    private TextView loadingSlideshowTextView;
-    private TextView permissionsDeniedTextView;
-    private LinearLayout permissionsExplanationLayout;
-    private Button grantPermissionsButton;
-    private CustomViewPager pager;
-    private Timer slideshowTimer;
-    private Gestures showActionBarGestures;
-    private List<String> loadedImagePaths;
-    private boolean paused;
-    private ActivityResultLauncher<String> requestPermissionLauncher;
-
-    private final PageTransformer[] TRANSFORMERS = new PageTransformer[]{
+    private final PageTransformer[] transformers = new PageTransformer[]{
             new AccordionTransformer(),
             new BackgroundToForegroundTransformer(),
             new CubeOutTransformer(),
@@ -157,36 +94,115 @@ public class MainActivity extends AppCompatActivity {
             new ZoomInTransformer(),
             new ZoomOutPageTransformer(),
     };
-    private List<String> filePaths;
-    private int pictureCount;
-    private int currentPage;
-    private Handler actionbarHideHandler;
-    private Handler slideshowStartHandler;
-    public boolean mDoubleBackToExitPressedOnce;
-    private boolean askedForPermissionOnce;
 
-    // TODO add message when the permissions are not granted
-    // TODO add explanation message for why permissions are required
-    // TODO test on vm and on physical devices
+    private final Runnable advanceSlideTask = this::advanceSlideAndReschedule;
+    private final Runnable displayScheduleTask = this::checkDisplaySchedule;
+    private final Runnable emptyLibraryRetryTask = this::retryEmptyLibrary;
+
+    /**
+     * Removable media can mount after this HOME activity starts. The broadcast
+     * triggers an immediate rescan; the timed empty-library retry covers firmware
+     * that sends the mount event before the receiver is registered.
+     */
+    private final BroadcastReceiver storageReceiver = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            if (!nightActive) {
+                startSlideshowWithPermissionCheck();
+            }
+        }
+    };
+
+    private ImagePagerAdapter imagePagerAdapter;
+    private CustomViewPager pager;
+    private View tutorial;
+    private View nightOverlay;
+    private TextView noFileFoundTextView;
+    private TextView loadingSlideshowTextView;
+    private TextView permissionsDeniedTextView;
+    private LinearLayout permissionsExplanationLayout;
+    private Button grantPermissionsButton;
+    private Gestures actionBarGestures;
+    private ActivityResultLauncher<String> requestPermissionLauncher;
+
+    private Future<?> activeFileScan;
+    private int fileScanGeneration;
+    private int currentPage;
+    private boolean nightActive;
+    private boolean askedForPermissionOnce;
+    private boolean doubleBackToExitPressed;
+
+    /**
+     * Holds only the paths needed by ViewPager. Bitmap decoding remains lazy, so
+     * large libraries do not keep every image in memory.
+     */
+    private final class ImagePagerAdapter extends PagerAdapter {
+        private final LayoutInflater inflater = LayoutInflater.from(MainActivity.this);
+        private final List<String> imagePaths;
+
+        private ImagePagerAdapter(List<String> imagePaths) {
+            this.imagePaths = new ArrayList<>(imagePaths);
+        }
+
+        @Override
+        public int getCount() {
+            return imagePaths.size();
+        }
+
+        @Override
+        public boolean isViewFromObject(@NonNull View view, @NonNull Object object) {
+            return view == object;
+        }
+
+        @NonNull
+        @Override
+        public Object instantiateItem(@NonNull ViewGroup container, int position) {
+            View photoView = inflater.inflate(R.layout.photo_container, container, false);
+            ImageView imageView = photoView.findViewById(R.id.photocontainer);
+            imageView.setScaleType(AppData.getScaling(MainActivity.this)
+                    ? ImageView.ScaleType.CENTER_CROP
+                    : ImageView.ScaleType.FIT_CENTER);
+            imageView.setImageBitmap(
+                    EXIFUtils.decodeFile(imagePaths.get(position), MainActivity.this));
+            imageView.setOnTouchListener(actionBarGestures);
+            container.addView(photoView);
+            return photoView;
+        }
+
+        @Override
+        public void destroyItem(
+                @NonNull ViewGroup container,
+                int position,
+                @NonNull Object object) {
+            container.removeView((RelativeLayout) object);
+        }
+    }
+
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        handleScheduledWakeIntent(getIntent());
         setContentView(R.layout.main_activity);
 
-        paused = false;
-        askedForPermissionOnce = false;
+        bindViews();
+        configureGestures();
+        configurePager();
+        configurePermissionRequest();
+    }
+
+    private void bindViews() {
         pager = findViewById(R.id.pager);
+        tutorial = findViewById(R.id.tutorial);
+        nightOverlay = findViewById(R.id.night_overlay);
         noFileFoundTextView = findViewById(R.id.no_files_found);
         loadingSlideshowTextView = findViewById(R.id.loading_slideshow);
         permissionsDeniedTextView = findViewById(R.id.permissions_denied);
         permissionsExplanationLayout = findViewById(R.id.permissions_explanation);
         grantPermissionsButton = findViewById(R.id.grant_permissions);
-        tutorial = findViewById(R.id.tutorial);
+    }
 
-        actionbarHideHandler = new Handler(Looper.getMainLooper());
-        slideshowStartHandler = new Handler(Looper.getMainLooper());
-
-        showActionBarGestures = new Gestures(getApplicationContext()) {
+    private void configureGestures() {
+        actionBarGestures = new Gestures(this) {
             @Override
             public void onSwipeBottom() {
                 showActionBar();
@@ -202,257 +218,401 @@ public class MainActivity extends AppCompatActivity {
                 showActionBar();
             }
         };
-        View mainActivity = findViewById(R.id.main_activity);
-        mainActivity.setOnTouchListener(showActionBarGestures);
+        findViewById(R.id.main_activity).setOnTouchListener(actionBarGestures);
+    }
 
-        pager.addOnPageChangeListener(new ViewPager.OnPageChangeListener() {
-            @Override
-            public void onPageScrollStateChanged(int state) {
-            }
-
-            @Override
-            public void onPageScrolled(int position, float positionOffset, int positionOffsetPixels) {
-            }
-
+    private void configurePager() {
+        pager.addOnPageChangeListener(new ViewPager.SimpleOnPageChangeListener() {
             @Override
             public void onPageSelected(int position) {
                 selectTransformer();
             }
         });
-        // Register the permissions callback, which handles the user's response to the
-        // system permissions dialog. Save the return value, an instance of
-        // ActivityResultLauncher, as an instance variable.
-        requestPermissionLauncher =
-                registerForActivityResult(new ActivityResultContracts.RequestPermission(), isGranted -> {
-                    startSlideshowWithPermissionsCheck();
-                });
-        grantPermissionsButton.setOnClickListener(view -> requestPermissionLauncher.launch(getPermissionCompat()));
+    }
+
+    private void configurePermissionRequest() {
+        requestPermissionLauncher = registerForActivityResult(
+                new ActivityResultContracts.RequestPermission(),
+                ignored -> startSlideshowWithPermissionCheck());
+        grantPermissionsButton.setOnClickListener(
+                ignored -> requestPermissionLauncher.launch(requiredImagePermission()));
+    }
+
+    @Override
+    protected void onStart() {
+        super.onStart();
+        registerStorageReceiver();
     }
 
     @Override
     protected void onResume() {
         super.onResume();
 
-        setupTimer();
+        // The return control is useful only while another app covers SimpleFrame.
+        FrameControlsService.dismissReturnOverlay(this);
+        NightModeScheduler.update(this);
+        applyDisplayState(true);
+        startDisplayScheduleChecks();
 
-        // refresh toolbar options (hide/show downloadNow)
         supportInvalidateOptionsMenu();
-        if (AppData.getFirstAppStart(getApplicationContext())) {
-            AppData.setFirstAppStart(getApplicationContext(), false);
+        if (AppData.getFirstAppStart(this)) {
+            AppData.setFirstAppStart(this, false);
         } else {
             tutorial.setVisibility(View.INVISIBLE);
         }
 
         pager.setVisibility(View.INVISIBLE);
         noFileFoundTextView.setVisibility(View.INVISIBLE);
-
-        startSlideshowWithPermissionsCheck();
+        if (!nightActive) {
+            startDaytimePlayback();
+        }
     }
 
-    private void startSlideshowWithPermissionsCheck() {
-        String permission = getPermissionCompat();
+    @Override
+    protected void onNewIntent(Intent intent) {
+        super.onNewIntent(intent);
+        setIntent(intent);
+        handleScheduledWakeIntent(intent);
+        if (applyDisplayState(false) && !nightActive) {
+            startDaytimePlayback();
+        }
+    }
+
+    @Override
+    protected void onPause() {
+        stopPlayback();
+        uiHandler.removeCallbacks(displayScheduleTask);
+        getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+        currentPage = pager.getCurrentItem();
+        super.onPause();
+    }
+
+    @Override
+    protected void onStop() {
+        unregisterReceiver(storageReceiver);
+        AppData.setCurrentPage(this, currentPage);
+        super.onStop();
+    }
+
+    @Override
+    protected void onDestroy() {
+        cancelFileScan();
+        fileScanExecutor.shutdownNow();
+        uiHandler.removeCallbacksAndMessages(null);
+        super.onDestroy();
+    }
+
+    private void registerStorageReceiver() {
+        IntentFilter filter = new IntentFilter();
+        filter.addAction(Intent.ACTION_MEDIA_MOUNTED);
+        filter.addAction(Intent.ACTION_MEDIA_UNMOUNTED);
+        filter.addAction(Intent.ACTION_MEDIA_EJECT);
+        filter.addDataScheme("file");
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            registerReceiver(storageReceiver, filter, Context.RECEIVER_EXPORTED);
+        } else {
+            registerReceiver(storageReceiver, filter);
+        }
+    }
+
+    private void startDaytimePlayback() {
+        scheduleNextSlide();
+        startSlideshowWithPermissionCheck();
+    }
+
+    private void stopPlayback() {
+        uiHandler.removeCallbacks(advanceSlideTask);
+        uiHandler.removeCallbacks(emptyLibraryRetryTask);
+        cancelFileScan();
+    }
+
+    private void startSlideshowWithPermissionCheck() {
+        String permission = requiredImagePermission();
         permissionsExplanationLayout.setVisibility(View.INVISIBLE);
         permissionsDeniedTextView.setVisibility(View.INVISIBLE);
-        if (ContextCompat.checkSelfPermission(this, permission) == PackageManager.PERMISSION_GRANTED) {
-            startSlideshowWithDelay();
-        } else if (ActivityCompat.shouldShowRequestPermissionRationale(this, permission)) {
-            // In an educational UI, explain to the user why your app requires this
-            // permission for a specific feature to behave as expected, and what
-            // features are disabled if it's declined. In this UI, include a
-            // "cancel" or "no thanks" button that lets the user continue
-            // using your app without granting the permission.
+
+        if (ContextCompat.checkSelfPermission(this, permission)
+                == PackageManager.PERMISSION_GRANTED) {
+            scanPhotoLibrary();
+            return;
+        }
+
+        if (ActivityCompat.shouldShowRequestPermissionRationale(this, permission)) {
             permissionsExplanationLayout.setVisibility(View.VISIBLE);
-        } else if (ContextCompat.checkSelfPermission(this, permission) == PackageManager.PERMISSION_DENIED) {
-            if (askedForPermissionOnce) {
-                // If we ask for the permissions here too, it results in a loop as
-                // we launch the permission request activity, but it returns to this one immediately
-                // if the permissions is denied.
-                permissionsDeniedTextView.setVisibility(View.VISIBLE);
-            } else {
-                askedForPermissionOnce = true;
-                requestPermissionLauncher.launch(getPermissionCompat());
-            }
-        }
-    }
-
-    private String getPermissionCompat() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            return Manifest.permission.READ_MEDIA_IMAGES;
+        } else if (askedForPermissionOnce) {
+            // Avoid reopening a permission dialog that Android has already denied.
+            permissionsDeniedTextView.setVisibility(View.VISIBLE);
         } else {
-            return Manifest.permission.READ_EXTERNAL_STORAGE;
+            askedForPermissionOnce = true;
+            requestPermissionLauncher.launch(permission);
         }
     }
 
-    private void setupTimer() {
-        if (slideshowTimer == null) {
-            slideshowTimer = new Timer();
+    private String requiredImagePermission() {
+        return Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU
+                ? Manifest.permission.READ_MEDIA_IMAGES
+                : Manifest.permission.READ_EXTERNAL_STORAGE;
+    }
+
+    /**
+     * Starts a cancellable recursive scan. The generation check prevents a
+     * canceled or slower scan from replacing a newer result.
+     */
+    private void scanPhotoLibrary() {
+        if (nightActive) {
+            return;
         }
-        SlideShowTimerTask slideShowTimerTask = new SlideShowTimerTask(new WeakReference<>(this));
-        int displayTimeInMillis = AppData.getDisplayTime(this) * 1000;
-        debug("Display time: " + displayTimeInMillis);
-        slideshowTimer.schedule(slideShowTimerTask, displayTimeInMillis, displayTimeInMillis);
+
+        uiHandler.removeCallbacks(emptyLibraryRetryTask);
+        hideActionBar();
+        getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+        noFileFoundTextView.setVisibility(View.INVISIBLE);
+        pager.setVisibility(View.INVISIBLE);
+        loadingSlideshowTextView.setVisibility(View.VISIBLE);
+
+        cancelFileScan();
+        int generation = fileScanGeneration;
+        String imagePath = AppData.getImagePath(this);
+        boolean randomize = AppData.getRandomize(this);
+        activeFileScan = fileScanExecutor.submit(() -> {
+            List<String> imagePaths = FileUtils.getFileList(imagePath, randomize);
+            runOnUiThread(() -> applyScannedImages(generation, imagePaths));
+        });
     }
 
-    @Override
-    public boolean onMenuOpened(int featureId, Menu menu) {
-        startActivity(new Intent(this, SettingsActivity.class));
-        return super.onMenuOpened(featureId, menu);
-    }
-
-    @Override
-    public void onRequestPermissionsResult(final int requestCode, @NonNull final String[] permissions, @NonNull final int[] grantResults) {
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
-        if (requestCode == REQUEST_READ_EXTERNAL_STORAGE_PERMISSION) {
-            if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                startActivity(new Intent(this, SettingsActivity.class));
-            } else {
-                Toast.makeText(this, R.string.main_toast_noSDReadRights, Toast.LENGTH_LONG).show();
-            }
+    private void cancelFileScan() {
+        fileScanGeneration++;
+        if (activeFileScan != null) {
+            activeFileScan.cancel(true);
+            activeFileScan = null;
         }
     }
 
-    @Override
-    public boolean onCreateOptionsMenu(Menu menu) {
-        // Inflate the menu; this adds items to the action bar if it is present.
-        getMenuInflater().inflate(R.menu.activity_main_menu, menu);
-        return true;
+    private void applyScannedImages(int generation, List<String> imagePaths) {
+        if (generation != fileScanGeneration || isFinishing() || isDestroyed() || nightActive) {
+            return;
+        }
+        activeFileScan = null;
+
+        imagePagerAdapter = new ImagePagerAdapter(imagePaths);
+        pager.setAdapter(imagePagerAdapter);
+        restoreCurrentPage(imagePagerAdapter.getCount());
+        pager.setScrollDurationFactor(8);
+
+        loadingSlideshowTextView.setVisibility(View.INVISIBLE);
+        boolean libraryIsEmpty = imagePagerAdapter.getCount() == 0;
+        noFileFoundTextView.setVisibility(libraryIsEmpty ? View.VISIBLE : View.INVISIBLE);
+        pager.setVisibility(libraryIsEmpty ? View.INVISIBLE : View.VISIBLE);
+        if (libraryIsEmpty) {
+            uiHandler.postDelayed(emptyLibraryRetryTask, EMPTY_LIBRARY_RETRY_DELAY_MS);
+        }
     }
 
-    @Override
-    public boolean onOptionsItemSelected(MenuItem item) {
-        Intent myIntent;
-        int itemId = item.getItemId();
-        if (itemId == R.id.action_settings) {
-            myIntent = new Intent(this, SettingsActivity.class);
+    private void restoreCurrentPage(int imageCount) {
+        currentPage = AppData.getCurrentPage(this);
+        if (currentPage < 0 || currentPage >= imageCount) {
+            currentPage = 0;
+        }
+        if (currentPage > 0) {
+            pager.setCurrentItem(currentPage, false);
+        }
+    }
+
+    private void retryEmptyLibrary() {
+        if (!nightActive && (imagePagerAdapter == null || imagePagerAdapter.getCount() == 0)) {
+            startSlideshowWithPermissionCheck();
+        }
+    }
+
+    private void scheduleNextSlide() {
+        uiHandler.removeCallbacks(advanceSlideTask);
+        if (!nightActive) {
+            long delayMillis = Math.max(1, AppData.getDisplayTime(this)) * 1_000L;
+            uiHandler.postDelayed(advanceSlideTask, delayMillis);
+        }
+    }
+
+    private void advanceSlideAndReschedule() {
+        nextSlideshowPage();
+        scheduleNextSlide();
+    }
+
+    private void nextSlideshowPage() {
+        if (nightActive || imagePagerAdapter == null || imagePagerAdapter.getCount() == 0) {
+            return;
+        }
+        int nextPage = (pager.getCurrentItem() + 1) % imagePagerAdapter.getCount();
+        pager.setCurrentItem(nextPage, true);
+    }
+
+    private void startDisplayScheduleChecks() {
+        uiHandler.removeCallbacks(displayScheduleTask);
+        uiHandler.postDelayed(displayScheduleTask, DISPLAY_SCHEDULE_CHECK_INTERVAL_MS);
+    }
+
+    private void checkDisplaySchedule() {
+        if (applyDisplayState(false) && !nightActive) {
+            startDaytimePlayback();
+        }
+        uiHandler.postDelayed(displayScheduleTask, DISPLAY_SCHEDULE_CHECK_INTERVAL_MS);
+    }
+
+    /**
+     * Applies the current day/night state and reports whether it changed.
+     * Expensive playback work only happens when a transition actually occurs.
+     */
+    private boolean applyDisplayState(boolean force) {
+        boolean shouldBeNight = NightSchedule.isNight(
+                AppData.getNightModeEnabled(this),
+                NightSchedule.currentMinuteOfDay(),
+                AppData.getNightStartMinutes(this),
+                AppData.getNightEndMinutes(this));
+        boolean changed = shouldBeNight != nightActive;
+        if (!force && !changed) {
+            return false;
+        }
+
+        nightActive = shouldBeNight;
+        if (nightActive) {
+            stopPlayback();
+            loadingSlideshowTextView.setVisibility(View.INVISIBLE);
+            DisplayController.enterNight(this, nightOverlay);
         } else {
-            return super.onOptionsItemSelected(item);
+            DisplayController.enterDay(this, nightOverlay);
         }
-        startActivity(myIntent);
-        return true;
+        return changed;
     }
 
-    protected void onPause() {
-        super.onPause();
+    @SuppressWarnings("deprecation")
+    private void handleScheduledWakeIntent(Intent intent) {
+        if (intent == null || !NightModeScheduler.ACTION_WAKE.equals(intent.getAction())) {
+            return;
+        }
 
-        slideshowTimer.cancel();
-        slideshowTimer = null;
-
-        getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
-
-        currentPage = pager.getCurrentItem();
-    }
-
-    public void onBackPressed() {
-        if (mDoubleBackToExitPressedOnce) {
-            super.onBackPressed();
+        // Alarm receivers may run while the panel is asleep. Set the flag before
+        // drawing so the resumed activity can make the display visible immediately.
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
+            setTurnScreenOn(true);
         } else {
-            this.mDoubleBackToExitPressedOnce = true;
-            Toast.makeText(this, R.string.main_toast_exitmsg, Toast.LENGTH_SHORT).show();
-            new Handler(Looper.getMainLooper()).postDelayed(() -> mDoubleBackToExitPressedOnce = false, 2000);
+            getWindow().addFlags(WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON);
         }
     }
 
-    public void showActionBar() {
+    private void selectTransformer() {
+        int[] transitionValues = getResources().getIntArray(R.array.transitionTypeValues);
+        int transitionIndex = AppData.getTransitionStyle(this);
+        if (transitionIndex == transitionValues.length - 1) {
+            transitionIndex = (int) (Math.random() * transformers.length);
+        }
+        pager.setPageTransformer(true, transformers[transitionIndex]);
+    }
+
+    private void showActionBar() {
         getWindow().clearFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN);
-        ActionBar actionBar = this.getSupportActionBar();
+        ActionBar actionBar = getSupportActionBar();
         if (actionBar != null) {
             actionBar.show();
         }
-        actionbarHideHandler.postDelayed(this::hideActionBar, ACTION_BAR_SHOW_DURATION);
+        uiHandler.removeCallbacks(hideActionBarTask);
+        uiHandler.postDelayed(hideActionBarTask, ACTION_BAR_SHOW_DURATION_MS);
     }
 
     private void hideActionBar() {
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN);
-        ActionBar actionBar = this.getSupportActionBar();
+        ActionBar actionBar = getSupportActionBar();
         if (actionBar != null) {
             actionBar.hide();
         }
     }
 
-    private void nextSlideshowPage() {
-        if (!paused && imagePagerAdapter != null && imagePagerAdapter.getCount() > 0) {
-            int localpage = pager.getCurrentItem();
-            localpage++;
-            // We loop when reaching the end
-            if (localpage == imagePagerAdapter.getCount()) {
-                localpage = 0;
-            }
-            pager.setCurrentItem(localpage, true);
-            debug("localpage " + localpage);
-        }
+    @Override
+    public boolean onMenuOpened(int featureId, Menu menu) {
+        openSettings();
+        return super.onMenuOpened(featureId, menu);
     }
 
     @Override
-    protected void onStop() {
-        super.onStop();
-        // Save the current Page to resume after next start
-        AppData.setCurrentPage(getApplicationContext(), currentPage);
-        debug("SAVING PAGE  " + currentPage);
+    public boolean onCreateOptionsMenu(Menu menu) {
+        getMenuInflater().inflate(R.menu.activity_main_menu, menu);
+        return true;
     }
 
     @Override
-    public void onActivityResult(int requestCode, int resultCode, Intent data) {
-        super.onActivityResult(requestCode, resultCode, data);
-        if (requestCode == APP_STORAGE_ACCESS_REQUEST_CODE) {
-            startSlideshow();
+    public boolean onOptionsItemSelected(@NonNull MenuItem item) {
+        int itemId = item.getItemId();
+        if (itemId == R.id.action_settings) {
+            openSettings();
+            return true;
+        }
+        if (itemId == R.id.action_android_settings) {
+            openAndroidSettings();
+            return true;
+        }
+        if (itemId == R.id.action_power) {
+            openPowerDialog();
+            return true;
+        }
+        return super.onOptionsItemSelected(item);
+    }
+
+    private void openSettings() {
+        startActivity(new Intent(this, SettingsActivity.class));
+    }
+
+    /**
+     * Opens Android Settings only after the trusted return overlay is ready.
+     * This prevents hardware-button-free frames from becoming trapped in the
+     * external Settings app.
+     */
+    private void openAndroidSettings() {
+        if (!FrameControlsService.isConnected()) {
+            showFrameControlsSetupDialog();
+            return;
+        }
+        if (!FrameControlsService.requestReturnOverlay(this)) {
+            Toast.makeText(this, R.string.frame_controls_unavailable, Toast.LENGTH_LONG).show();
+            return;
+        }
+        startActivity(new Intent(Settings.ACTION_SETTINGS));
+    }
+
+    /** Opens the firmware power/restart dialog through the accessibility service. */
+    private void openPowerDialog() {
+        if (!FrameControlsService.isConnected()) {
+            showFrameControlsSetupDialog();
+            return;
+        }
+        if (!FrameControlsService.showPowerDialog()) {
+            Toast.makeText(this, R.string.frame_controls_unavailable, Toast.LENGTH_LONG).show();
         }
     }
 
-    private void startSlideshowWithDelay() {
-        loadingSlideshowTextView.setVisibility(View.VISIBLE);
-        // Start slideshow with a very short delay so we don't freeze on the previous activity
-        slideshowStartHandler.postDelayed(this::startSlideshow, 1);
+    /**
+     * Accessibility is required for global power actions and for an overlay the
+     * Android Settings app cannot suppress. If enabled while that screen is open,
+     * the pending return button appears immediately and brings the user back.
+     */
+    private void showFrameControlsSetupDialog() {
+        new AlertDialog.Builder(this)
+                .setTitle(R.string.frame_controls_setup_title)
+                .setMessage(R.string.frame_controls_setup_message)
+                .setNegativeButton(android.R.string.cancel, null)
+                .setPositiveButton(R.string.frame_controls_setup_open, (dialog, which) -> {
+                    FrameControlsService.requestReturnOverlay(this);
+                    startActivity(new Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS));
+                })
+                .show();
     }
 
-    private void startSlideshow() {
-        hideActionBar();
-        getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
-        String imagePath = AppData.getImagePath(getApplicationContext());
-        List<String> imagePaths = FileUtils.getFileList(getApplicationContext(), imagePath);
-        if (!imagePaths.equals(loadedImagePaths)) {
-            loadedImagePaths = imagePaths;
-
-            imagePagerAdapter = new ImagePagerAdapter(this);
-            pager.setAdapter(imagePagerAdapter);
-
-            filePaths = FileUtils.getFileList(getApplicationContext(), AppData.getImagePath(getApplicationContext()));
-            pictureCount = filePaths.size();
-            imagePagerAdapter.notifyDataSetChanged();
-
-            currentPage = AppData.getCurrentPage(getApplicationContext());
-            if (imagePagerAdapter.getCount() < currentPage) {
-                currentPage = 1;
-            }
-            // start on the page we left in onPause, unless it was the first or last picture (as this freezes the slideshow)
-            if (currentPage < Objects.requireNonNull(pager.getAdapter()).getCount() - 1 && currentPage > 0) {
-                pager.setCurrentItem(currentPage);
-            }
-            pager.setScrollDurationFactor(8);
+    @Override
+    public void onBackPressed() {
+        if (doubleBackToExitPressed) {
+            super.onBackPressed();
+            return;
         }
-        loadingSlideshowTextView.setVisibility(View.INVISIBLE);
-        if (pictureCount == 0) {
-            noFileFoundTextView.setVisibility(View.VISIBLE);
-            pager.setVisibility(View.INVISIBLE);
-        } else {
-            noFileFoundTextView.setVisibility(View.INVISIBLE);
-            pager.setVisibility(View.VISIBLE);
-        }
-    }
-
-    public void selectTransformer() {
-        int[] transitionTypeValues = getResources().getIntArray(R.array.transitionTypeValues);
-        int transitionStyleIndex = AppData.getTransitionStyle(getApplicationContext());
-        // If the style is the random style, we randomly select another style
-        if (transitionStyleIndex == transitionTypeValues.length - 1) {
-            transitionStyleIndex = (int) (Math.random() * TRANSFORMERS.length);
-        }
-        pager.setPageTransformer(true, TRANSFORMERS[transitionStyleIndex]);
-    }
-
-    private void debug(String msg) {
-        if (DEBUG) {
-            Log.d(TAG, msg);
-        }
+        doubleBackToExitPressed = true;
+        Toast.makeText(this, R.string.main_toast_exitmsg, Toast.LENGTH_SHORT).show();
+        uiHandler.postDelayed(() -> doubleBackToExitPressed = false, 2_000);
     }
 }
-

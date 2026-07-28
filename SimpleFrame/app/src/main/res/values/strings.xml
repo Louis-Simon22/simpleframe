@@ -11,8 +11,17 @@
     <!-- MAIN STRINGS END -->
 
     <!-- SETTINGS STRINGS -->
-    <string name="action_settings">Settings</string>
+    <string name="action_settings">Slideshow settings</string>
+    <string name="action_android_settings">Android settings</string>
+    <string name="action_power">Power</string>
     <string name="title_activity_settings">Settings</string>
+    <string name="frame_controls_service_name">SimpleFrame controls</string>
+    <string name="frame_controls_service_description">Shows a return button over Android Settings and provides the photo frame power menu.</string>
+    <string name="frame_controls_return">Return to SimpleFrame</string>
+    <string name="frame_controls_setup_title">Enable frame controls</string>
+    <string name="frame_controls_setup_message">Enable “SimpleFrame controls” in Accessibility. This is required for the Power button and for a floating return button over Android Settings.</string>
+    <string name="frame_controls_setup_open">Open Accessibility settings</string>
+    <string name="frame_controls_unavailable">SimpleFrame controls are unavailable. Check the Accessibility setting and try again.</string>
     <string name="sett_displayTime">Display Time</string>
     <string name="sett_displayTimeSumm">Display time for each picture</string>
     <string name="sett_randomize">Random image</string>
@@ -25,9 +34,12 @@
     <string name="sett_scalingSummOn">Pictures will be scaled to fit the display</string>
     <string name="settings_category_source">Source Settings</string>
     <string name="settings_category_slideshow">Slideshow Settings</string>
+    <string name="settings_category_display">Display Settings</string>
     <string name="sett_transition">Transition</string>
     <string name="sett_transitionSumm">Choose the desired transition for the slideshow</string>
     <string name="sett_srcPath_externalSD">Path to pictures</string>
+    <string name="sett_choose_picture_folder">Choose picture folder</string>
+    <string name="sett_picture_folder_summary">All supported photos in this folder and its subfolders are included</string>
     <string name="sett_dialog_title">Select directory</string>
     <string name="sett_dialog_posBtn" tools:ignore="ButtonCase">OK</string>
     <string name="sett_dialog_negBtn">Cancel</string>
@@ -41,6 +53,25 @@
     <string name="sett_key_firstStart" translatable="false">FirstStart</string>
     <string name="sett_key_currentPage" translatable="false">currentpage</string>
     <string name="sett_key_direction" translatable="false">toogledirection</string>
+    <string name="sett_key_brightness_mode" translatable="false">BrightnessMode</string>
+    <string name="sett_key_brightness_percent" translatable="false">BrightnessPercent</string>
+    <string name="sett_key_night_mode" translatable="false">NightMode</string>
+    <string name="sett_key_night_start" translatable="false">NightStartMinutes</string>
+    <string name="sett_key_night_end" translatable="false">NightEndMinutes</string>
+    <string name="sett_key_saved_screen_timeout" translatable="false">SavedScreenOffTimeout</string>
+    <string name="sett_brightness_mode">Brightness control</string>
+    <string name="sett_brightness_percent">Manual brightness</string>
+    <string name="sett_night_mode">Night schedule</string>
+    <string name="sett_night_mode_summary">Turn the display off and wake it on a daily schedule</string>
+    <string name="sett_night_start">Screen off time</string>
+    <string name="sett_night_end">Screen on time</string>
+    <string name="sett_brightness_value">%1$d%%</string>
+    <string name="sett_brightness_dialog_title">Brightness: %1$d%%</string>
+    <string name="sett_system_settings_permission_title">Allow display control?</string>
+    <string name="sett_system_settings_permission_message">SimpleFrame can always dim its own window. Allow Modify system settings to switch automatic brightness and fully turn the screen off at night.</string>
+    <string name="sett_system_settings_permission_allow">Allow</string>
+    <string name="sett_system_settings_permission_later">Later</string>
+    <string name="sett_auto_brightness_no_sensor">Automatic selected, but this device does not report an ambient light sensor</string>
     <string name="loading_slideshow">Loading slideshow…</string>
     <string name="permissions_explanation">Permissions must be granted to access the image files.</string>
     <string name="permissions_denied">Permissions were denied. Head to the system settings to grant them again.</string>

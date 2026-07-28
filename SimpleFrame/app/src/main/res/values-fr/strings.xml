@@ -9,8 +9,17 @@
     <!-- MAIN STRINGS END -->
 
     <!-- SETTINGS STRINGS -->
-    <string name="action_settings">Paramètres</string>
+    <string name="action_settings">Paramètres du diaporama</string>
+    <string name="action_android_settings">Paramètres Android</string>
+    <string name="action_power">Alimentation</string>
     <string name="title_activity_settings">Paramètres</string>
+    <string name="frame_controls_service_name">Commandes SimpleFrame</string>
+    <string name="frame_controls_service_description">Affiche un bouton de retour au-dessus des paramètres Android et fournit le menu d’alimentation du cadre photo.</string>
+    <string name="frame_controls_return">Revenir à SimpleFrame</string>
+    <string name="frame_controls_setup_title">Activer les commandes du cadre</string>
+    <string name="frame_controls_setup_message">Activez « Commandes SimpleFrame » dans les paramètres d’accessibilité. Cette option est nécessaire pour le bouton d’alimentation et le bouton de retour flottant au-dessus des paramètres Android.</string>
+    <string name="frame_controls_setup_open">Ouvrir les paramètres d’accessibilité</string>
+    <string name="frame_controls_unavailable">Les commandes SimpleFrame ne sont pas disponibles. Vérifiez les paramètres d’accessibilité et réessayez.</string>
     <string name="sett_displayTime">Temps d\'affichage</string>
     <string name="sett_displayTimeSumm">Le temps d\'affichage de chaque image</string>
     <string name="sett_randomize">Image aléatoires</string>
@@ -23,9 +32,12 @@
     <string name="sett_scalingSummOn">Les images seront mises à l\'échelle de l\'écran</string>
     <string name="settings_category_source">Paramètres de source</string>
     <string name="settings_category_slideshow">Paramètres de diaporama</string>
+    <string name="settings_category_display">Paramètres d\'affichage</string>
     <string name="sett_transition">Transition</string>
     <string name="sett_transitionSumm">Choisissez la transition désirée pour le diaporama</string>
     <string name="sett_srcPath_externalSD">Chemin vers les images</string>
+    <string name="sett_choose_picture_folder">Choisir le dossier d\'images</string>
+    <string name="sett_picture_folder_summary">Toutes les photos compatibles de ce dossier et de ses sous-dossiers sont incluses</string>
     <string name="sett_dialog_title">Choisissez le dossier des images</string>
     <string name="sett_dialog_posBtn" tools:ignore="ButtonCase">Ok</string>
     <string name="sett_dialog_negBtn">Annuler</string>
@@ -35,6 +47,19 @@
     <string name="permissions_explanation">Les permissions doivent être allouées pour accéder aux fichiers d\'images.</string>
     <string name="permissions_denied">Les permissions ont été refusées. Allez dans les paramètres systèmes pour les allouer de nouveau.</string>
     <string name="continue_">Allouer</string>
+    <string name="sett_brightness_mode">Contrôle de la luminosité</string>
+    <string name="sett_brightness_percent">Luminosité manuelle</string>
+    <string name="sett_night_mode">Horaire nocturne</string>
+    <string name="sett_night_mode_summary">Éteindre et rallumer l\'écran chaque jour selon un horaire</string>
+    <string name="sett_night_start">Heure d\'extinction</string>
+    <string name="sett_night_end">Heure d\'allumage</string>
+    <string name="sett_brightness_value">%1$d%%</string>
+    <string name="sett_brightness_dialog_title">Luminosité : %1$d%%</string>
+    <string name="sett_system_settings_permission_title">Autoriser le contrôle de l\'écran ?</string>
+    <string name="sett_system_settings_permission_message">SimpleFrame peut toujours assombrir sa propre fenêtre. Autorisez la modification des paramètres système pour utiliser la luminosité automatique et éteindre complètement l\'écran la nuit.</string>
+    <string name="sett_system_settings_permission_allow">Autoriser</string>
+    <string name="sett_system_settings_permission_later">Plus tard</string>
+    <string name="sett_auto_brightness_no_sensor">Le mode automatique est sélectionné, mais cet appareil ne signale aucun capteur de lumière ambiante</string>
     <!-- SETTINGS STRINGS END -->
 
 </resources>

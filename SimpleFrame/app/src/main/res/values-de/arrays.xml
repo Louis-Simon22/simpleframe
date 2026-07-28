@@ -31,4 +31,10 @@
         <item name="11">Zufällig</item>
     </string-array>
 
+    <string-array name="brightnessModeEntries">
+        <item>Systemeinstellung verwenden</item>
+        <item>Manuell</item>
+        <item>Automatisch (Lichtsensor)</item>
+    </string-array>
+
 </resources>
